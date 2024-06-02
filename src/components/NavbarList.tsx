@@ -22,6 +22,9 @@ const NavbarList = ({ open,  handleDrawerClose }: NavbarListProps) => {
     { text: "Templates", icon: <img src={TemplateIcon} alt="Templates" style={{width: 25, height: 25}}/>, link: "/templates", end: true },
     { text: "Files", icon: <img src={FilesIcon} alt="Files" style={{width: 25, height: 25}}/>, link: "/files", end: true },
     { text: "Databases", icon: <img src={DatabasesIcon} alt="Databases" style={{width: 25, height: 25}}/>, link: "/databases", end: true },
+
+    { text: "Forms", icon: <img src={DatabasesIcon} alt="Forms" style={{width: 25, height: 25}}/>, link: "/databases", end: true },
+
     { text: "About Us", icon: <img src={GroupIcon} alt="About Us" style={{width: 25, height: 25}}/>, link: "/about-us", end: true },
     { text: "Contact Us", icon: <img src={ContactIcon} alt="Contact Us" style={{width: 25, height: 25}}/>, link: "/contact-us", end: true },
   ];

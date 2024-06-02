@@ -66,6 +66,7 @@ import ResetPassword from "./components/ResetPassword";
 import ChooseDBPage from "./v2_components/ChooseDBPage";
 import ChooseDBScreen from "./v2_components/ChooseDBScreen";
 import GenerateForm from "./v2_components/GenerateFormPage";
+import LocalForm from "./v2_components/LocalForm";
 
 /* Customize default MUI theme */
 declare module "@mui/material/styles" {
@@ -672,6 +673,27 @@ function App() {
                     />
                   </Route>
 
+                  {/* nested for localform */}
+                  <Route path="localforms">  {/* parent url | localhost:3000/databases */}
+                    {" "}
+                    <Route
+                      index
+                      element={
+                        <PrivateRoute>
+                          <ChooseDBScreen setDatabaseId={setDatabaseId} />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="localform_1"
+                      element={
+                        <PrivateRoute>
+                          <ChooseDBPage startLoading={StartLoading} stopLoading={StopLoading} />
+                        </PrivateRoute>
+                      }
+                    />
+                  </Route>
+
                   
                   
                   <Route
@@ -702,7 +724,7 @@ function App() {
 
                   {/* GEN FORMS */}
                   {/* nested for genformspage */}
-                  <Route path="forms"> {/* parent url | localhost:3000/templates*/}
+                  <Route path="aiform"> {/* parent url | localhost:3000/aiform*/}
                     <Route
                       index
                       element={
@@ -713,6 +735,17 @@ function App() {
                     />
                   </Route>
 
+                  <Route path="localform"> {/* parent url | localhost:3000/localform*/}
+                    <Route
+                      index
+                      element={
+                        <PrivateRoute>
+                          <LocalForm />
+                        </PrivateRoute>
+                      }
+                    />
+                  </Route>
+                  
                   {/* -----------------DataMate end------------------ */}
 
                   {/* nested for Profile  */}

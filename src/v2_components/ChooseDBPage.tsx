@@ -47,6 +47,11 @@ interface TableRow {
   [key: string]: string | number | boolean | Date;
 }
 
+// interface HeaderInfo {
+//   tableName: string;
+//   headers: string[];
+// }
+
 export default function ChooseDBPage({stopLoading, startLoading}:DatabasePageProps) {
     const loc = useLocation();
     const nav = useNavigate();
@@ -66,12 +71,17 @@ export default function ChooseDBPage({stopLoading, startLoading}:DatabasePagePro
     // ----------DataMate V2--------------
     const [formHeaders, setFormHeaders] = useState<string[]>([]);
 
+    // const [headersInfo, setHeadersInfo] = useState<HeaderInfo[]>([]);
+
 
     function createColumns(strings: string[]): HeaderConfig[] {
-      let strArr:HeaderConfig[] = [];
+      console.log("Current table name:", currentTbl)
       console.log("Column headers:", strings) // retrieve column headers
       setFormHeaders(strings); // store headers to local variable
 
+      
+
+      let strArr:HeaderConfig[] = [];
       strings.map((str, i)=>
       {
         strArr.push({
@@ -342,7 +352,8 @@ export default function ChooseDBPage({stopLoading, startLoading}:DatabasePagePro
     // Here lies DataMate_V2 Increment functions
 
     const handleGenFormNav = () => {
-      nav('/forms', { state: { headers: formHeaders } });
+      nav('/aiform', { state: { tableName: currentTbl, headers: formHeaders } });
+      // nav('/forms', { state: { headersInfo } });
     };
     
     return(
@@ -352,10 +363,10 @@ export default function ChooseDBPage({stopLoading, startLoading}:DatabasePagePro
                 <Box sx={{display:"flex", flexDirection:"row", justifyContent:"space-between"}}>
                     <div style={{display:"flex", flexDirection:"row", padding:"5px"}}>
                         <h1 style={{margin:5}}>{Database}</h1>
-                        <div className="iconTab" style={{height:"25px", width:"25px", 
+                        {/* <div className="iconTab" style={{height:"25px", width:"25px", 
                         backgroundColor:'#71C887', padding:"10px", borderRadius:10}}>
                             <EditIcon/>
-                        </div>
+                        </div> */}
                     </div>
                     <div className="iconTab"
                     onClick={handleExport}

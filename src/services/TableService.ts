@@ -47,5 +47,9 @@ class TableService{
             console.log(err);
         })
     }
+
+    async getColByTblName(tblName: string) {
+        
+    }
 }
 export default new TableService();

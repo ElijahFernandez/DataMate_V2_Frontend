@@ -28,37 +28,75 @@ import "react-quill/dist/quill.snow.css";
 
 export default function GenerateForm() {
   const location = useLocation();
-  const headers = location.state?.headers || [];
+  
   const [editorHtml, setEditorHtml] = useState(""); // State for the HTML editor content
   const [searchQuery, setSearchQuery] = useState(""); // State for the search query
   const [formOutput, setFormOutput] = useState(""); // State for the API response
   const [isLoading, setIsLoading] = useState(false); // State for loading indicator
   const [error, setError] = useState(""); // State for error handling
+  
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-  };
+  // --------DataMate V2 Increment---------
+  const [dirtyHeaders, setDirtyHeaders] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const headers = location.state?.headers || [];
+  const tblName = location.state?.tableName || "";
+
+  // useEffect(() => {
+  //   console.log("Headers:", headers);
+  //   console.log("Table name:", tblName);
+  //   if (headers.length > 0) {
+  //     setIsLoading(true); // Set loading state to true before making the API call
+  //     setError(""); // Reset error state
+
+  //     axios
+  //       .post("http://localhost:8080/api/headers", headers)
+  //       .then((response) => {
+  //         console.log("API Response:", response.data);
+  //         setFormOutput(response.data);
+  //         setIsLoading(false); // Set loading state to false after receiving the API response
+  //       })
+  //       .catch((error) => {
+  //         console.error("There was an error!", error);
+  //         setError("An error occurred while processing the headers."); // Set error state
+  //         setIsLoading(false); // Set loading state to false if there's an error
+  //       });
+  //   }
+  // }, [headers]);
 
   useEffect(() => {
     console.log("Headers:", headers);
+    console.log("Table name:", tblName);
     if (headers.length > 0) {
-      setIsLoading(true); // Set loading state to true before making the API call
-      setError(""); // Reset error state
+      setIsLoading(true);
+      setError("");
 
       axios
         .post("http://localhost:8080/api/headers", headers)
         .then((response) => {
           console.log("API Response:", response.data);
           setFormOutput(response.data);
-          setIsLoading(false); // Set loading state to false after receiving the API response
+          setIsLoading(false);
+
+          // Make the second axios call for column headers
+          axios
+            .get(`http://localhost:8080/columns?tableName=${tblName}`)
+            .then((response) => {
+              console.log("Column headers:", response.data);
+              setDirtyHeaders(response.data);
+            })
+            .catch((error) => {
+              console.error("Error fetching column headers:", error);
+            });
         })
         .catch((error) => {
           console.error("There was an error!", error);
-          setError("An error occurred while processing the headers."); // Set error state
-          setIsLoading(false); // Set loading state to false if there's an error
+          setError("An error occurred while processing the headers.");
+          setIsLoading(false);
         });
     }
-  }, [headers]);
+  }, [headers, tblName]);
+
 
   const handleCopyToClipboard = () => {
     navigator.clipboard
@@ -70,6 +108,21 @@ export default function GenerateForm() {
         console.error("Failed to copy text: ", err);
       });
   };
+  // const handleSaveLocally = () => {
+  //   axios
+  //     .get(`http://localhost:8080/columns?tableName=${tblName}`)
+  //     .then((response) => {
+  //       console.log("Column headers:", response.data);
+  //       // You can perform additional operations with the column headers here
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error fetching column headers:", error);
+  //     });
+  // };
+  const handleSaveLocally = () => {
+    navigate('/localform', { state: { tableName: tblName, headers: headers, dirtyHeaders: dirtyHeaders } });
+  };
+
 
   return (
     <Grid container sx={{ mt: { xs: 7, sm: 8, md: 8 } }} direction="column">
@@ -121,7 +174,7 @@ export default function GenerateForm() {
         <Grid container spacing={2} sx={{ marginTop: 2 }}>
           <Grid item xs={12} md={6}>
             <Paper elevation={3} sx={{ padding: 2, minHeight: "400px" }}>
-              <Typography variant="h6">Generated Form</Typography>
+              <Typography variant="h6">Generated Form for <b>{tblName}</b></Typography>
               <Button
                 variant="contained"
                 color="primary"
@@ -129,6 +182,14 @@ export default function GenerateForm() {
                 sx={{ mt: 2 }}
               >
                 Copy to Clipboard
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSaveLocally}
+                sx={{ mt: 2, marginLeft: 2 }}
+              >
+                Save Locally
               </Button>
               {isLoading ? (
                 <Box
@@ -191,6 +252,7 @@ export default function GenerateForm() {
             </Paper>
           </Grid>
         </Grid>
+        
       </Container>
     </Grid>
   );
