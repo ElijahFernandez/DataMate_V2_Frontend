@@ -17,6 +17,7 @@ import {
   CardContent,
   CircularProgress,
 } from "@mui/material";
+import { Toaster, toast } from 'react-hot-toast';
 import noRecentFiles from "../images/noRecentFiless.png";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -42,6 +43,7 @@ export default function GenerateForm() {
   const headers = location.state?.headers || [];
   const tblName = location.state?.tableName || "";
 
+  
   // useEffect(() => {
   //   console.log("Headers:", headers);
   //   console.log("Table name:", tblName);
@@ -65,9 +67,18 @@ export default function GenerateForm() {
   // }, [headers]);
 
   useEffect(() => {
+    const savedHeaders = localStorage.getItem('headers');
+    const savedFormOutput = localStorage.getItem('formOutput');
+
     console.log("Headers:", headers);
     console.log("Table name:", tblName);
-    if (headers.length > 0) {
+    console.log("Dirty Headers:", dirtyHeaders);
+    
+    if (savedHeaders && JSON.parse(savedHeaders).toString() === headers.toString()) {
+      // If headers haven't changed, use the saved form output
+      setFormOutput(savedFormOutput || "");
+    } else {
+      if (headers.length > 0) {
       setIsLoading(true);
       setError("");
 
@@ -94,6 +105,7 @@ export default function GenerateForm() {
           setError("An error occurred while processing the headers.");
           setIsLoading(false);
         });
+      }
     }
   }, [headers, tblName]);
 
@@ -102,23 +114,14 @@ export default function GenerateForm() {
     navigator.clipboard
       .writeText(formOutput)
       .then(() => {
-        alert("Copied to clipboard!");
+        // alert("Copied to clipboard!");
+        toast.success('Copied to clipboard!'); // Show success toast
       })
       .catch((err) => {
         console.error("Failed to copy text: ", err);
       });
   };
-  // const handleSaveLocally = () => {
-  //   axios
-  //     .get(`http://localhost:8080/columns?tableName=${tblName}`)
-  //     .then((response) => {
-  //       console.log("Column headers:", response.data);
-  //       // You can perform additional operations with the column headers here
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error fetching column headers:", error);
-  //     });
-  // };
+
   const handleSaveLocally = () => {
     navigate('/localform', { state: { tableName: tblName, headers: headers, dirtyHeaders: dirtyHeaders } });
   };
@@ -127,6 +130,7 @@ export default function GenerateForm() {
   return (
     <Grid container sx={{ mt: { xs: 7, sm: 8, md: 8 } }} direction="column">
       <Box className="gradientbg">
+      <Toaster />
         <Stack
           direction="column"
           justifyContent="center"
@@ -175,6 +179,7 @@ export default function GenerateForm() {
           <Grid item xs={12} md={6}>
             <Paper elevation={3} sx={{ padding: 2, minHeight: "400px" }}>
               <Typography variant="h6">Generated Form for <b>{tblName}</b></Typography>
+
               <Button
                 variant="contained"
                 color="primary"
@@ -191,6 +196,7 @@ export default function GenerateForm() {
               >
                 Save Locally
               </Button>
+              
               {isLoading ? (
                 <Box
                   sx={{

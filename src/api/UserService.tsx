@@ -4,7 +4,7 @@ import { User } from "./dataTypes";
 // const USER_BASE_URL = "https://datamate-api.onrender.com/user";
 const USER_BASE_URL = "http://localhost:8080/user";
 
-const config = {
+const config = { 
   headers: {
     "Content-Type": "multipart/form-data",
   },

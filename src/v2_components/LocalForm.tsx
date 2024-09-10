@@ -49,11 +49,11 @@ export default function LocalForm() {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-  
+    console.log('Form values:', formValues);
     try {
       const response = await axios.post('http://localhost:8080/insert', {
         tableName: tblName,
-        headers: headers,
+        headers: dirtyHeaders,
         values: Object.values(formValues),
       });
   
@@ -103,7 +103,7 @@ export default function LocalForm() {
             <Paper elevation={3} sx={{ padding: 2, minHeight: "400px" }}>
               <form onSubmit={handleSubmit}>
                 <Grid container spacing={2}>
-                  {headers.map((header: string, index: number) => (
+                  {dirtyHeaders.map((header: string, index: number) => (
                     <Grid item xs={12} key={index}>
                       <TextField
                         fullWidth

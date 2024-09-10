@@ -245,6 +245,7 @@ const DatabaseList: React.FC<DatabaseListProp> = ({
                 flex: 1,
               }}
             >
+              Choose a database:
               <Grid
                 padding={{ xs: "5px", sm: "5px", lg: "20px", xl: "20px" }}
                 style={{
@@ -256,6 +257,7 @@ const DatabaseList: React.FC<DatabaseListProp> = ({
                   boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.1)",
                 }}
               >
+                
                 <SearchIcon style={{ fontSize: "24px", color: "gray" }} />
 
                 <input
