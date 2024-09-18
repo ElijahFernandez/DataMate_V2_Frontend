@@ -455,45 +455,70 @@ function hasCorrespondingValue(table: (string | number)[][], columnName1: string
     }
   }
 
-    function generateConvertCommandObject(jsonData: TableRow[], tableName: string): ConvertCommand {
-        if (jsonData.length === 0) {
-            throw new Error("JSON array is empty.");
-        }
-        const columns: string[] = Object.keys(jsonData[0]);
-        let newTblName = tableName.replace(/[^a-zA-Z0-9]/g,'_'); 
-        console.log("new name: ",newTblName)
-        const tblColsQuery = `(${columns.map(col => `${col.replace(/[^a-zA-Z0-9]/g,'_')} ${getColumnType(jsonData[0][col])}`).join(', ')});`;
-    
-
-        const insertValues = jsonData.map(record => `(${columns.map(col => {
-            const value = record[col];
-            if(value === "NULL"){
-                return 'NULL';
-            }
-            if (typeof value === "string") {
-                return `'${value}'`;
-              } else if (value instanceof Date) {
-                // Format date as 'YYYY-MM-DD'
-                return `'${value.toISOString().split("T")[0]}'`;
-              } else {
-                if ((value as number) > 2000000000) {
-                  return `'${value}'`;
-                } else {
-                  return value;
-                }
-            }
-        }).join(', ')})`).join(', ');
-    
-        let SQLcolumns: string[] = Object.keys(jsonData[0]).map(key => key.replace(/[^a-zA-Z0-9]/g,'_'));
-        console.log("join: ", SQLcolumns.join(', '));
-        const valsQuery = `(${SQLcolumns.join(', ')}) VALUES ${insertValues};`;
-        
-        return {
-            tblName: `${newTblName}`,
-            tblColumns:`${tblColsQuery}`,
-            insertValues: `${valsQuery}`
-        };
+  function identifyPrimaryKey(jsonData: TableRow[]): string | null {
+    if (jsonData.length === 0) return null;
+  
+    const columns = Object.keys(jsonData[0]);
+  
+    // Filter columns that contain "id" in the name
+    const idColumns = columns.filter(col => col.toLowerCase().includes('_id'));
+  
+    // If no columns contain "id", return null
+    if (idColumns.length === 0) return null;
+  
+    // Choose the leftmost column
+    return idColumns[0];
+  }
+  
+  function generateConvertCommandObject(jsonData: TableRow[], tableName: string): ConvertCommand {
+    if (jsonData.length === 0) {
+        throw new Error("JSON array is empty.");
     }
+
+    // Get column names
+    const columns: string[] = Object.keys(jsonData[0]);
+    // Clean table name for SQL compliance
+    let newTblName = tableName.replace(/[^a-zA-Z0-9]/g, '_'); 
+    console.log("new name: ", newTblName);
+
+    // Determine the primary key column
+    const primaryKey = identifyPrimaryKey(jsonData) || columns[0];
+
+    // CREATE TABLE
+    const tblColsQuery = `(${columns.map(col => `${col.replace(/[^a-zA-Z0-9]/g,'_')} ${getColumnType(jsonData[0][col])}`).join(', ')}${primaryKey ? `, PRIMARY KEY(${primaryKey.replace(/[^a-zA-Z0-9]/g,'_')})` : ''});`;
+    console.log(tblColsQuery);
+
+    // INSERT INTO
+    const insertValues = jsonData.map(record => `(${columns.map(col => {
+        const value = record[col];
+        if (value === "NULL") {
+            return 'NULL';
+        }
+        if (typeof value === "string") {
+            return `'${value}'`;
+        } else if (value instanceof Date) {
+            // Format date as 'YYYY-MM-DD'
+            return `'${value.toISOString().split("T")[0]}'`;
+        } else {
+            if ((value as number) > 2000000000) {
+                return `'${value}'`;
+            } else {
+                return value;
+            }
+        }
+    }).join(', ')})`).join(', ');
+
+    let SQLcolumns: string[] = Object.keys(jsonData[0]).map(key => key.replace(/[^a-zA-Z0-9]/g, '_'));
+    console.log("join: ", SQLcolumns.join(', '));
+    const valsQuery = `(${SQLcolumns.join(', ')}) VALUES ${insertValues};`;
+
+    return {
+        tblName: `${newTblName}`,
+        tblColumns: `${tblColsQuery}`,
+        insertValues: `${valsQuery}`
+    };
+}
+ 
 
     const uid = function(){
         return Date.now().toString(36) + Math.floor(Math.pow(10, 12) + Math.random() * 9*Math.pow(10, 12)).toString(36);
