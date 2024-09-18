@@ -84,7 +84,7 @@ export default function ChooseDBPage({
   let sqlStr = "";
   let FirstColumns: string[] = [];
   const [isChatboxOpen, setIsChatboxOpen] = useState<boolean>(false);
-
+  
   const toggleChatbox = () => {
     setIsChatboxOpen((prev) => !prev);
   };
@@ -92,6 +92,7 @@ export default function ChooseDBPage({
   // ----------DataMate V2--------------
   const [formHeaders, setFormHeaders] = useState<string[]>([]);
 
+  const [currentView, setCurrentView] = useState("db")
   // const [headersInfo, setHeadersInfo] = useState<HeaderInfo[]>([]);
 
   function createColumns(strings: string[]): HeaderConfig[] {
@@ -285,7 +286,8 @@ export default function ChooseDBPage({
 
   useEffect(() => {
     console.log("headers: ", formHeaders);
-    
+    setCurrentView("db")
+    console.log("Current view: ", currentView)
     if (DBObj.length === Tables.length && downloadWindow) {
       //for create
       console.log("str before ", sqlStr);
@@ -435,10 +437,6 @@ export default function ChooseDBPage({
                 }}
               >
                 <h1 style={{ margin: 5 }}>{Database}</h1>
-                {/* <div className="iconTab" style={{height:"25px", width:"25px", 
-                        backgroundColor:'#71C887', padding:"10px", borderRadius:10}}>
-                            <EditIcon/>
-                        </div> */}
               </div>
               <div
                 className="iconTab"
@@ -592,6 +590,27 @@ export default function ChooseDBPage({
                     ? "Table"
                     : currentTbl}
                 </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "#347845",
+                    maxWidth: "40%",
+                    padding: ".3em",
+                    display: "flex",
+                    justifyContent: "center",
+                    color: "white",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    // Add your click handling logic here
+                    console.log('Box clicked!');
+                    setCurrentView("dbint")
+                  }}
+                >
+                  {currentTbl === "" || currentTbl === undefined
+                    ? "Table"
+                    : currentTbl}
+                </Box>
+                
                 <Box
                   sx={{
                     width: "100%",

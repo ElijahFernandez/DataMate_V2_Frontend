@@ -50,3 +50,7 @@ export interface FileActivityLogEntity {
   fileId: number;
   userId: string;
 }
+
+export interface FormHeaders {
+  headers: string[] | undefined;
+}

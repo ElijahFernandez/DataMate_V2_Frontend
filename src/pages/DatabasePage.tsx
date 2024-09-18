@@ -7,6 +7,8 @@ import {
   Tabs,
   TextField,
   Button,
+  Modal,
+  Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -16,6 +18,9 @@ import ReactDataGrid from "@inovua/reactdatagrid-community";
 import { EditIcon, TblIcon } from "../components/icons";
 import { SaveAs } from "@mui/icons-material";
 import Chatbox from "../components/Chatbox";
+
+import FormPrompt from "../prompts/FormPrompt";
+import { FormHeaders } from "../api/dataTypes";
 
 type DatabasePageProps = {
   stopLoading: () => void;
@@ -58,6 +63,16 @@ interface TableRow {
   [key: string]: string | number | boolean | Date;
 }
 
+//
+//
+//
+type FormObj = {
+  headers: string[] | undefined;
+};
+//
+//
+//
+
 export default function DatabasePage({
   stopLoading,
   startLoading,
@@ -78,13 +93,50 @@ export default function DatabasePage({
   let FirstColumns: string[] = [];
   const [isChatboxOpen, setIsChatboxOpen] = useState<boolean>(false);
 
+  //
+  //
+  //
+  const [formHeaders, setFormHeaders] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => {
+    setOpen(false);
+    setIsProcessing(true); // Start processing when FormPrompt closes
+  };
+
+  useEffect(() => {
+    if (isProcessing) {
+      // Simulate processing time (remove this in production)
+      const timer = setTimeout(() => {
+        setIsProcessing(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isProcessing]);
+  //
+  //
+  //
+
+  // Function to convert formHeaders to JSON format
+  const convertToJson = (): string => {
+    // Convert the formHeaders array to JSON string
+    return JSON.stringify({ headers: formHeaders });
+  };
+
+  // Example usage
+  const handleConvert = () => {
+    const jsonOutput = convertToJson();
+    console.log(jsonOutput);
+  };
+
   const toggleChatbox = () => {
     setIsChatboxOpen((prev) => !prev);
   };
 
   function createColumns(strings: string[]): HeaderConfig[] {
     let strArr: HeaderConfig[] = [];
-
+    setFormHeaders(strings);
     strings.map((str, i) => {
       strArr.push({
         name: str,
@@ -348,6 +400,17 @@ export default function DatabasePage({
     compileDB();
   };
 
+  const handleChooseForm = () => {
+    console.log("Choose Forms");
+    // should load the modal
+    handleOpen();
+  };
+
+  const toggleImport = () => {
+    // Implement this function if needed, or pass an empty function
+    console.log("Toggle import");
+  };
+
   useEffect(() => {
     if (Tables[currentTblID] !== undefined || Tables[currentTblID] !== null) {
       TableService.getTblByName(Tables[currentTblID])
@@ -401,39 +464,22 @@ export default function DatabasePage({
                 justifyContent: "space-between",
               }}
             >
-              <div
-                style={{
+              <h1 style={{ margin: 5 }}>{Database}</h1>
+              {/* <div className="iconTab" onClick={handleExport} style={{ display: "flex", fontSize: "18px", alignSelf: "flex-end", cursor: "pointer", }}>EXPORT AS SQL</div> */}
+              <Box
+                sx={{
                   display: "flex",
                   flexDirection: "row",
-                  padding: "5px",
+                  justifyContent: "flex-end",
                 }}
               >
-                <h1 style={{ margin: 5 }}>{Database}</h1>
-                <div
-                  className="iconTab"
-                  style={{
-                    height: "25px",
-                    width: "25px",
-                    backgroundColor: "#71C887",
-                    padding: "10px",
-                    borderRadius: 10,
-                  }}
-                >
-                  <EditIcon />
-                </div>
-              </div>
-              <div
-                className="iconTab"
-                onClick={handleExport}
-                style={{
-                  display: "flex",
-                  fontSize: "18px",
-                  alignSelf: "flex-end",
-                  cursor: "pointer",
-                }}
-              >
-                EXPORT AS SQL
-              </div>
+                <Button onClick={handleExport} variant="outlined">
+                  EXPORT TO SQL
+                </Button>
+                <Button onClick={handleChooseForm} variant="outlined">
+                  SELECT FORMS
+                </Button>
+              </Box>
             </Box>
             <Box
               style={{
@@ -628,6 +674,49 @@ export default function DatabasePage({
             {isChatboxOpen ? "Close Chat" : "Open Chat"}
           </Button>
           <Chatbox isOpen={isChatboxOpen} onClose={toggleChatbox} />
+
+          <Modal
+            open={open}
+            onClose={handleClose}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+          >
+            <Box sx={{ display: "flex" }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <FormPrompt
+                  toggleImport={toggleImport}
+                  startLoading={startLoading}
+                  headers={formHeaders}
+                  onClose={handleClose}
+                />
+              </Box>
+            </Box>
+          </Modal>
+          {isProcessing && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                flexDirection: "column",
+                zIndex: 9999,
+              }}
+            >
+              <CircularProgress color="inherit" />
+              <Typography
+                variant="h6"
+                style={{ color: "white", marginTop: "20px" }}
+              >
+                Processing...
+              </Typography>
+            </div>
+          )}
         </>
       ) : (
         <></>
