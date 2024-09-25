@@ -907,8 +907,50 @@ export default function DatabasePage({
                 <FormPrompt
                   startLoading={startLoading}
                   headers={formHeaders}
-                  onClose={handleClose}
+                  onClose={() => {
+                    handleClose();
+                    handleProcessingComplete();
+                  }}
                   setProcessedHeaders={setProcessedHeaders}
+                />
+              </Box>
+            </Box>
+          </Modal>
+
+          <Modal
+            open={showInsertForm}
+            onClose={handleInsertFormClose}
+            aria-labelledby="insert-form-modal-title"
+            aria-describedby="insert-form-modal-description"
+          >
+            <Box sx={{ display: "flex" }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <InsertFormPrompt
+                  processedHeaders={processedHeaders}
+                  handleClose={handleClose2}
+                  tblName={currentTbl}
+                />
+              </Box>
+            </Box>
+          </Modal>
+
+           {/*Modal for reports*/}
+           <Modal
+            open={reportOpen}
+            onClose={handleReportClose}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+          >
+            <Box sx={{ display: "flex" }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <ReportPrompt
+                  toggleImport={toggleImport}
+                  startLoading={startLoading}
+                  headers={formHeaders}
+                  onClose={handleReportClose}
+                  databaseName={Database} // Pass the database name
+                  tableName={currentTbl}  // Pass the table name
+                  userID={userID} // Pass the User ID
                 />
               </Box>
             </Box>
