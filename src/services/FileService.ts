@@ -1,7 +1,6 @@
 import axios from "axios";
-
+const API_URL = "http://localhost:8080";
 class FileService {
-    
 
     //upload by user
     async uploadFile(file: File, userId: string) {
@@ -95,7 +94,33 @@ class FileService {
             console.log(err);
         });
     }
+
+    async getReportsByUser(userid: string){
+        return axios.get(`${API_URL}/getUserReports/${userid}`)
+        .then((res)=>{
+            if (res.data) {
+                return res.data;
+            }
+        }).catch((err)=>{
+            console.log(err);
+        })
+    }
  
+    async postReport(rprtName:string, rprtCode:string, userid:string){
+        return axios.post(`${API_URL}/postReports`,{
+            "reportName": rprtName,
+            "reportCode": rprtCode,
+            "user":{
+            "userId": userid,
+            }
+        }).then((res)=>{
+            if (res.data) {
+                return res.data;
+            }
+        }).catch((err)=>{
+            console.log(err);
+        });
+    }
 
     // async deletePost(postId:number){
     //     return axios.delete("http://localhost:8080/post/deletePost/"+postId

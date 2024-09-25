@@ -21,16 +21,21 @@ import Chatbox from "../components/Chatbox";
 
 import FormPrompt from "../prompts/FormPrompt";
 import { FormHeaders } from "../api/dataTypes";
+import ReportPrompt from "../prompts/ReportPrompt";
 
 type DatabasePageProps = {
   stopLoading: () => void;
   startLoading: () => void;
 };
 
+type UserType = {
+  userId: number;
+}
+
 type DatabaseType = {
   databaseId: number;
   databaseName: string;
-  user: Object;
+  user: UserType;
 };
 
 type TableType = {
@@ -84,6 +89,7 @@ export default function DatabasePage({
   const [tblData, setTblData] = useState<Object[]>([]);
   const [currentTbl, setCurrentTbl] = useState("");
   const [currentTblID, setCurrentTblID] = useState(0);
+  const [userID, setUserID] = useState(0);
   const [colsData, setColsData] = useState<HeaderConfig[]>([]);
   const [Database, setDBName] = useState("");
   const [downloadWindow, setDLWindow] = useState(false);
@@ -93,17 +99,25 @@ export default function DatabasePage({
   let FirstColumns: string[] = [];
   const [isChatboxOpen, setIsChatboxOpen] = useState<boolean>(false);
 
+  
   //
   //
   //
   const [formHeaders, setFormHeaders] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
+  const handleFormOpen = () => setFormOpen(true);
+  const handleFormClose = () => {
+    setFormOpen(false);
     setIsProcessing(true); // Start processing when FormPrompt closes
   };
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const handleReportOpen = () => setReportOpen(true);
+  const handleReportClose = () => {
+    setReportOpen(false);
+  }
+
 
   useEffect(() => {
     if (isProcessing) {
@@ -524,6 +538,7 @@ export default function DatabasePage({
         let tblResponse = res as TableType[];
         let tableArr = [...Tables];
         setDBName(tblResponse[0].database.databaseName);
+        setUserID(tblResponse[0].database.user.userId);
         FirstColumns = tblResponse[0].columns;
         tblResponse.map((tbl, i) => {
           if (!tableArr.includes(tbl.tableName)) {
@@ -563,8 +578,15 @@ export default function DatabasePage({
   const handleChooseForm = () => {
     console.log("Choose Forms");
     // should load the modal
-    handleOpen();
+    handleFormOpen();
   };
+
+  const handleOpenReport = () => {
+    console.log("Report modal should open");
+    // should load the modal
+    handleReportOpen();
+  };
+
 
   const toggleImport = () => {
     // Implement this function if needed, or pass an empty function
@@ -633,11 +655,14 @@ export default function DatabasePage({
                   justifyContent: "flex-end",
                 }}
               >
-                <Button onClick={handleExport} variant="outlined">
+                <Button onClick={handleExport} variant="outlined" sx={{ margin: '10px' }}>
                   EXPORT TO SQL
                 </Button>
-                <Button onClick={handleChooseForm} variant="outlined">
+                <Button onClick={handleChooseForm} variant="outlined" sx={{ margin: '10px' }}>
                   SELECT FORMS
+                </Button>
+                <Button onClick={handleOpenReport} variant="outlined" sx={{ margin: '10px' }}>
+                  CREATE REPORT
                 </Button>
               </Box>
             </Box>
@@ -835,9 +860,10 @@ export default function DatabasePage({
           </Button>
           <Chatbox isOpen={isChatboxOpen} onClose={toggleChatbox} />
 
+          {/*Modal for forms*/}
           <Modal
-            open={open}
-            onClose={handleClose}
+            open={formOpen}
+            onClose={handleFormClose}
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
           >
@@ -847,7 +873,29 @@ export default function DatabasePage({
                   toggleImport={toggleImport}
                   startLoading={startLoading}
                   headers={formHeaders}
-                  onClose={handleClose}
+                  onClose={handleFormClose}
+                />
+              </Box>
+            </Box>
+          </Modal>
+
+          {/*Modal for reports*/}
+          <Modal
+            open={reportOpen}
+            onClose={handleReportClose}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+          >
+            <Box sx={{ display: "flex" }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <ReportPrompt
+                  toggleImport={toggleImport}
+                  startLoading={startLoading}
+                  headers={formHeaders}
+                  onClose={handleReportClose}
+                  databaseName={Database} // Pass the database name
+                  tableName={currentTbl}  // Pass the table name
+                  userID={userID} // Pass the User ID
                 />
               </Box>
             </Box>
