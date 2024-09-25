@@ -20,7 +20,7 @@ import { SaveAs } from "@mui/icons-material";
 import Chatbox from "../components/Chatbox";
 
 import FormPrompt from "../prompts/FormPrompt";
-import { FormHeaders } from "../api/dataTypes";
+import InsertFormPrompt from "../prompts/InsertFormPrompt";
 
 type DatabasePageProps = {
   stopLoading: () => void;
@@ -66,9 +66,10 @@ interface TableRow {
 //
 //
 //
-type FormObj = {
-  headers: string[] | undefined;
-};
+interface ProcessedFormHeaders {
+  headerName: string;
+  headerValue: string;
+}
 //
 //
 //
@@ -100,34 +101,51 @@ export default function DatabasePage({
   const [open, setOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const handleOpen = () => setOpen(true);
+  const [showInsertForm, setShowInsertForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+
   const handleClose = () => {
     setOpen(false);
-    setIsProcessing(true); // Start processing when FormPrompt closes
+    setIsProcessing(true); 
+  };
+  const handleClose2 = () => {
+    setOpen(false);
+    setShowInsertForm(false)
+  };
+
+  const handleInsertFormClose = (
+    event: React.MouseEvent<HTMLElement>,
+    reason: "backdropClick" | "escapeKeyDown" | "close"
+  ) => {
+    // Prevent the modal from closing on backdrop click
+    if (reason !== "backdropClick") {
+      setShowInsertForm(false);
+    }
   };
 
   useEffect(() => {
     if (isProcessing) {
-      // Simulate processing time (remove this in production)
+      
       const timer = setTimeout(() => {
         setIsProcessing(false);
       }, 3000);
       return () => clearTimeout(timer);
     }
   }, [isProcessing]);
-  //
-  //
-  //
+
+  const [processedHeaders, setProcessedHeaders] = useState<
+    ProcessedFormHeaders[] | undefined
+  >([]);
+  const handleProcessingComplete = () => {
+    setIsProcessing(false);
+    setShowInsertForm(true);
+    console.log("Show insert form" + showInsertForm);
+  };
 
   // Function to convert formHeaders to JSON format
   const convertToJson = (): string => {
     // Convert the formHeaders array to JSON string
     return JSON.stringify({ headers: formHeaders });
-  };
-
-  // Example usage
-  const handleConvert = () => {
-    const jsonOutput = convertToJson();
-    console.log(jsonOutput);
   };
 
   const toggleChatbox = () => {
@@ -220,99 +238,108 @@ export default function DatabasePage({
   }
 
   // function getCreateQuery(
-  //   jsonData: TableRow[], 
-  //   tableName: string, 
+  //   jsonData: TableRow[],
+  //   tableName: string,
   //   primaryKeyColumn?: string
   // ): string {
   //   if (jsonData.length === 0) {
   //     throw new Error("JSON array is empty.");
   //   }
-  
+
   //   let dbSql = Database.replace(/ *\([^)]*\) */g, "");
   //   let returnStr = `CREATE TABLE ${dbSql}.${tableName}`;
-    
+
   //   const columns: string[] = Object.keys(jsonData[0]);
-  
+
   //   // Function to transform column names
   //   const transformColumnName = (col: string): string => col.replace(/[^a-zA-Z0-9]/g, "_");
-  
+
   //   // Automatically identify primary key if none provided
   //   if (!primaryKeyColumn) {
   //     // Look for the leftmost column that contains 'id'
   //     primaryKeyColumn = columns.find(col => col.toLowerCase().includes('id')) || undefined;
   //   }
-    
+
   //   // Transform primary key column if it was identified
   //   const transformedPrimaryKeyColumn = primaryKeyColumn ? transformColumnName(primaryKeyColumn) : undefined;
-    
+
   //   // Construct the columns part of the query
   //   let columnsDefinition = columns
   //     .map(col => `${transformColumnName(col)} ${getColumnType(jsonData[0][col])}`)
   //     .join(", ");
-    
+
   //   // Add primary key definition if found
   //   if (transformedPrimaryKeyColumn && columns.includes(primaryKeyColumn!)) {
   //     columnsDefinition += `, PRIMARY KEY (${transformedPrimaryKeyColumn})`;
   //   }
-  
+
   //   returnStr += ` (${columnsDefinition});`;
-    
+
   //   return returnStr;
-  // }  
+  // }
   function getCreateQuery(
-  jsonData: TableRow[], 
-  tableName: string, 
-  primaryKeyColumn?: string
-): string {
-  if (jsonData.length === 0) {
-    throw new Error("JSON array is empty.");
-  }
-
-  let dbSql = Database.replace(/ *\([^)]*\) */g, "");
-  let returnStr = `CREATE TABLE ${dbSql}.${tableName}`;
-  
-  const columns: string[] = Object.keys(jsonData[0]);
-
-  // Function to transform column names
-  const transformColumnName = (col: string): string => col.replace(/[^a-zA-Z0-9]/g, "_");
-
-  // Helper function to check if a column contains unique numeric values
-  const isNumericAndUnique = (col: string): boolean => {
-    const values = jsonData.map(row => row[col]);
-    const uniqueValues = new Set(values);
-    // Check if all values are numbers and if they are unique
-    return values.every(val => typeof val === 'number') && uniqueValues.size === values.length;
-  };
-
-  // Automatically identify primary key if none provided
-  if (!primaryKeyColumn) {
-    // Look for the leftmost column with numeric unique values
-    primaryKeyColumn = columns.find(col => isNumericAndUnique(col));
-
-    // If no numeric unique column is found, fallback to the 'id' clause
-    if (!primaryKeyColumn) {
-      primaryKeyColumn = columns.find(col => col.toLowerCase().includes('id')) || undefined;
+    jsonData: TableRow[],
+    tableName: string,
+    primaryKeyColumn?: string
+  ): string {
+    if (jsonData.length === 0) {
+      throw new Error("JSON array is empty.");
     }
-  }
-  
-  // Transform primary key column if it was identified
-  const transformedPrimaryKeyColumn = primaryKeyColumn ? transformColumnName(primaryKeyColumn) : undefined;
-  
-  // Construct the columns part of the query
-  let columnsDefinition = columns
-    .map(col => `${transformColumnName(col)} ${getColumnType(jsonData[0][col])}`)
-    .join(", ");
-  
-  // Add primary key definition if found
-  if (transformedPrimaryKeyColumn && columns.includes(primaryKeyColumn!)) {
-    columnsDefinition += `, PRIMARY KEY (${transformedPrimaryKeyColumn})`;
-  }
 
-  returnStr += ` (${columnsDefinition});`;
-  
-  return returnStr;
-}
+    let dbSql = Database.replace(/ *\([^)]*\) */g, "");
+    let returnStr = `CREATE TABLE ${dbSql}.${tableName}`;
 
+    const columns: string[] = Object.keys(jsonData[0]);
+
+    // Function to transform column names
+    const transformColumnName = (col: string): string =>
+      col.replace(/[^a-zA-Z0-9]/g, "_");
+
+    // Helper function to check if a column contains unique numeric values
+    const isNumericAndUnique = (col: string): boolean => {
+      const values = jsonData.map((row) => row[col]);
+      const uniqueValues = new Set(values);
+      // Check if all values are numbers and if they are unique
+      return (
+        values.every((val) => typeof val === "number") &&
+        uniqueValues.size === values.length
+      );
+    };
+
+    // Automatically identify primary key if none provided
+    if (!primaryKeyColumn) {
+      // Look for the leftmost column with numeric unique values
+      primaryKeyColumn = columns.find((col) => isNumericAndUnique(col));
+
+      // If no numeric unique column is found, fallback to the 'id' clause
+      if (!primaryKeyColumn) {
+        primaryKeyColumn =
+          columns.find((col) => col.toLowerCase().includes("id")) || undefined;
+      }
+    }
+
+    // Transform primary key column if it was identified
+    const transformedPrimaryKeyColumn = primaryKeyColumn
+      ? transformColumnName(primaryKeyColumn)
+      : undefined;
+
+    // Construct the columns part of the query
+    let columnsDefinition = columns
+      .map(
+        (col) =>
+          `${transformColumnName(col)} ${getColumnType(jsonData[0][col])}`
+      )
+      .join(", ");
+
+    // Add primary key definition if found
+    if (transformedPrimaryKeyColumn && columns.includes(primaryKeyColumn!)) {
+      columnsDefinition += `, PRIMARY KEY (${transformedPrimaryKeyColumn})`;
+    }
+
+    returnStr += ` (${columnsDefinition});`;
+
+    return returnStr;
+  }
 
   // function getAlterQuery(tables: { tableName: string, columns: string[] }[]): string {
   //   let alterQueries = "";
@@ -323,7 +350,7 @@ export default function DatabasePage({
 
   //   // Determine primary keys for each table
   //   const primaryKeys: { [tableName: string]: string } = {};
-    
+
   //   tables.forEach(table => {
   //     const idColumns = table.columns.filter(col => col.toLowerCase().includes('id'));
   //     if (idColumns.length > 0) {
@@ -354,48 +381,55 @@ export default function DatabasePage({
   //   });
 
   //   return alterQueries;
-  // }  
+  // }
 
-  function getAlterQuery(tables: { tableName: string, columns: string[] }[]): string {
+  function getAlterQuery(
+    tables: { tableName: string; columns: string[] }[]
+  ): string {
     let alterQueries = "";
     let dbSql = Database.replace(/ *\([^)]*\) */g, "");
 
     // Function to transform column names (clean them for SQL)
-    const transformColumnName = (col: string): string => col.replace(/[^a-zA-Z0-9]/g, "_");
+    const transformColumnName = (col: string): string =>
+      col.replace(/[^a-zA-Z0-9]/g, "_");
 
     // Determine primary keys for each table
     const primaryKeys: { [tableName: string]: string } = {};
-    
-    tables.forEach(table => {
-        if (table.columns.length > 0) {
-            // Assume the leftmost column is the primary key
-            primaryKeys[table.tableName] = table.columns[0];
-        }
+
+    tables.forEach((table) => {
+      if (table.columns.length > 0) {
+        // Assume the leftmost column is the primary key
+        primaryKeys[table.tableName] = table.columns[0];
+      }
     });
 
     // Build ALTER TABLE queries for foreign keys
-    tables.forEach(table => {
-        const primaryKey = primaryKeys[table.tableName];
+    tables.forEach((table) => {
+      const primaryKey = primaryKeys[table.tableName];
 
-        table.columns.forEach(col => {
-            if (col.toLowerCase().includes('id') && col !== primaryKey) {
-                // Find the table that has this column as a primary key
-                const referencedTable = tables.find(tbl => primaryKeys[tbl.tableName] === col);
+      table.columns.forEach((col) => {
+        if (col.toLowerCase().includes("id") && col !== primaryKey) {
+          // Find the table that has this column as a primary key
+          const referencedTable = tables.find(
+            (tbl) => primaryKeys[tbl.tableName] === col
+          );
 
-                if (referencedTable) {
-                    const transformedTableName = transformColumnName(table.tableName);
-                    const transformedColumn = transformColumnName(col);
-                    const transformedReferencedTableName = transformColumnName(referencedTable.tableName);
+          if (referencedTable) {
+            const transformedTableName = transformColumnName(table.tableName);
+            const transformedColumn = transformColumnName(col);
+            const transformedReferencedTableName = transformColumnName(
+              referencedTable.tableName
+            );
 
-                    // Append the ALTER TABLE query
-                    alterQueries += `ALTER TABLE ${dbSql}.${transformedTableName} ADD FOREIGN KEY (${transformedColumn}) REFERENCES ${transformedReferencedTableName}(${transformedColumn});\n`;
-                }
-            }
-        });
+            // Append the ALTER TABLE query
+            alterQueries += `ALTER TABLE ${dbSql}.${transformedTableName} ADD FOREIGN KEY (${transformedColumn}) REFERENCES ${transformedReferencedTableName}(${transformedColumn});\n`;
+          }
+        }
+      });
     });
 
     return alterQueries;
-}
+  }
 
   function getInsertQuery(jsonData: TableRow[], tableName: string): string {
     let dbSql = Database.replace(/ *\([^)]*\) */g, "");
@@ -482,9 +516,9 @@ export default function DatabasePage({
         sqlStr += getCreateQuery(tbl.data as TableRow[], tbl.tblName) + "\n";
       });
       //for alter (foreign keys)
-      const tableInfos = DBObj.map(tbl => ({
+      const tableInfos = DBObj.map((tbl) => ({
         tableName: tbl.tblName,
-        columns: Object.keys(tbl.data[0])
+        columns: Object.keys(tbl.data[0]),
       }));
       sqlStr += getAlterQuery(tableInfos) + "\n";
       //for insert
@@ -844,10 +878,30 @@ export default function DatabasePage({
             <Box sx={{ display: "flex" }}>
               <Box sx={{ flexGrow: 1 }}>
                 <FormPrompt
-                  toggleImport={toggleImport}
                   startLoading={startLoading}
                   headers={formHeaders}
-                  onClose={handleClose}
+                  onClose={() => {
+                    handleClose();
+                    handleProcessingComplete();
+                  }}
+                  setProcessedHeaders={setProcessedHeaders}
+                />
+              </Box>
+            </Box>
+          </Modal>
+
+          <Modal
+            open={showInsertForm}
+            onClose={handleInsertFormClose}
+            aria-labelledby="insert-form-modal-title"
+            aria-describedby="insert-form-modal-description"
+          >
+            <Box sx={{ display: "flex" }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <InsertFormPrompt
+                  processedHeaders={processedHeaders}
+                  handleClose={handleClose2}
+                  tblName={currentTbl}
                 />
               </Box>
             </Box>

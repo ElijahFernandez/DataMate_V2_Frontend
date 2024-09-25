@@ -9,11 +9,16 @@ import { Height, Opacity } from "@mui/icons-material";
 import axios from "axios";
 
 type FormProps = {
-  toggleImport: () => void;
   startLoading: () => void;
   headers: string[];
   onClose: () => void;
+  setProcessedHeaders: React.Dispatch<React.SetStateAction<ProcessedFormHeaders[] | undefined>>; // Correct type
 };
+
+interface ProcessedFormHeaders {
+  headerName: string;
+  headerValue: string;
+}
 
 const styles = {
   dialogPaper: {
@@ -54,7 +59,7 @@ const styles = {
 };
 
 
-const FormPrompt = ({ toggleImport, startLoading, headers, onClose }: FormProps) => {
+const FormPrompt = ({ startLoading, headers, onClose, setProcessedHeaders }: FormProps) => {
   const drop = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
   const userId = useSelector((state: RootState) => state.auth.userId);
@@ -84,16 +89,32 @@ const FormPrompt = ({ toggleImport, startLoading, headers, onClose }: FormProps)
   const processHeaders = async () => {
     setIsProcessing(true);
     try {
-      const response = await axios.post('http://localhost:8080/api/headers', formHeaders);
-      console.log("API response:", response.data);
-      // Handle the response as needed
+        const response = await axios.post('http://localhost:8080/api/headers', formHeaders);
+        
+        console.log("API response:", response);
+        console.log("Response data:", response.data);
+
+        // Assuming response.data is a string of comma-separated header values
+        const headerString = response.data;
+        const headerArray = headerString.split(',').map((header: string) => header.trim());
+
+        // Map to the desired format
+        const headersData: ProcessedFormHeaders[] = headers.map((headerName, index) => {
+            return {
+                headerName: headerName,
+                headerValue: headerArray[index] || '', // Use empty string if no corresponding value
+            };
+        });
+        console.log("Mapped Headers:", headersData);
+        setProcessedHeaders(headersData);
     } catch (error) {
-      console.error("Error processing headers:", error);
+        console.error("Error processing headers:", error);
     } finally {
-      setIsProcessing(false);
-      onClose(); // Close the FormPrompt after processing
+        setIsProcessing(false);
+        onClose(); 
     }
   };
+
 
   return (
     <Box sx={modalStyle}>
