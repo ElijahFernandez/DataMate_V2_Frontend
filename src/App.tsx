@@ -27,7 +27,6 @@ import Navbar from "./components/Navbar";
 import TemplatesPage from "./pages/TemplatesPage";
 import FileScreenPage from "./pages/FileScreenPage";
 import * as XLSX from "xlsx";
-import DatabaseScreenPage from "./pages/DatabaseScreenPage";
 import TableDetectPrompt from "./prompts/TableDetectPrompt";
 import SelectTablePrompt from "./prompts/SelectTablePrompt";
 import NoTablesDetectPrompt from "./prompts/NoTablesDetectPrompt";
@@ -67,6 +66,8 @@ import ChooseDBPage from "./v2_components/ChooseDBPage";
 import ChooseDBScreen from "./v2_components/ChooseDBScreen";
 import GenerateForm from "./v2_components/GenerateFormPage";
 import LocalForm from "./v2_components/LocalForm";
+import ReportScreen from "./v2_components/ReportScreen";
+import ReportPage from "./v2_components/ReportPage";
 
 /* Customize default MUI theme */
 declare module "@mui/material/styles" {
@@ -212,6 +213,11 @@ function App() {
 
   const setDatabaseId = (id: number) => {
     setUploadedFileId(id);
+  };
+
+  const [selectedReportId, setSelectedReportId] = useState(0); // Initialize to 0 or any appropriate default value
+  const setReportId = (id: number) => {
+    setSelectedReportId(id);
   };
 
   const setFileData = (
@@ -758,7 +764,27 @@ function App() {
                       }
                     />
                   </Route>
-                  
+
+                  {/* nested for Reports */}
+                  <Route path="reports">  {/* parent url | localhost:3000/reports */}
+                    {" "}
+                    <Route
+                      index
+                      element={
+                        <PrivateRoute>
+                          <ReportScreen setReportId={setReportId} />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="report"
+                      element={
+                        <PrivateRoute>
+                          <ReportPage startLoading={StartLoading} stopLoading={StopLoading} />
+                        </PrivateRoute>
+                      }
+                    />
+                  </Route>
                   {/* -----------------DataMate end------------------ */}
 
 

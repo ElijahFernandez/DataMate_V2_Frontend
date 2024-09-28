@@ -42,6 +42,12 @@ export interface DatabaseEntity {
   userId: string;
 }
 
+export interface ReportEntity {
+  reportId: number;
+  reportName: string,
+  userId: string;
+}
+
 
 export interface FileActivityLogEntity {
   logId: number;

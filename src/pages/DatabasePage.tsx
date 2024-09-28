@@ -87,6 +87,7 @@ export default function DatabasePage({
   const loc = useLocation();
   const nav = useNavigate();
   const dbId = loc.state.dbid;
+  // note: loc.state is getting the id from the prev page RIGHT HEREEE
   const [Tables, setTables] = useState<string[]>([]);
   const [tblData, setTblData] = useState<Object[]>([]);
   const [currentTbl, setCurrentTbl] = useState("");
