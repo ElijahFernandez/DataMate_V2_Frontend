@@ -69,6 +69,7 @@ import LocalForm from "./v2_components/LocalForm";
 import ReportScreen from "./v2_components/ReportScreen";
 import ReportPage from "./v2_components/ReportPage";
 import FormScreen from "./v2_components/FormScreen";
+import FormPage from "./v2_components/FormPage";
 
 /* Customize default MUI theme */
 declare module "@mui/material/styles" {
@@ -807,7 +808,7 @@ function App() {
                       path="form"
                       element={
                         <PrivateRoute>
-                          <ReportPage startLoading={StartLoading} stopLoading={StopLoading} />
+                          <FormPage startLoading={StartLoading} stopLoading={StopLoading} />
                         </PrivateRoute>
                       }
                     />

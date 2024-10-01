@@ -75,7 +75,7 @@ const FormList: React.FC<FormListProp> = ({
   const lgValue = Math.floor(12 / itemsPerRow);
   const xlValue = Math.floor(12 / itemsPerRow);
 
-  const handleClickformName = (form: FormEntity) => {
+  const handleClickFormName = (form: FormEntity) => {
     let id = form?.formId;
     console.log(id);
     nav("/forms/form", {
@@ -146,15 +146,15 @@ const FormList: React.FC<FormListProp> = ({
       ENCRYPTION_KEY
     ).toString(CryptoJS.enc.Utf8);
     if (decryptedUserId) {
-    //   FormService.getFormsByUser(decryptedUserId)
-    //     .then((res) => {
-    //       console.log(res);
-    //       setForms(res);
-    //       setLoading(false);
-    //     })
-    //     .catch((err) => {
-    //       console.log(err);
-    //     });
+      FormService.getFormsByUser(decryptedUserId)
+        .then((res) => {
+          console.log(res);
+          setForms(res);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     }
   }, [userId]);
 
@@ -205,16 +205,16 @@ const FormList: React.FC<FormListProp> = ({
     ).toString(CryptoJS.enc.Utf8);
 
     if (decryptedUserId) {
-    //   setLoading(true);
-    //   FormService.getFormsByUser(decryptedUserId)
-    //     .then((res) => {
-    //       console.log(res);
-    //       setForm(res);
-    //       setLoading(false);
-    //     })
-    //     .catch((err) => {
-    //       console.log(err);
-    //     });
+      setLoading(true);
+      FormService.getFormsByUser(decryptedUserId)
+        .then((res) => {
+          console.log(res);
+          setForm(res);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     }
   };
 
@@ -609,7 +609,7 @@ const FormList: React.FC<FormListProp> = ({
                         <div style={{ flex: "1" }}>
                           <div
                             key={form.formId}
-                            onClick={() => handleClickformName(form)}
+                            onClick={() => handleClickFormName(form)}
                           >
                             {form.formName}
                           </div>
@@ -688,7 +688,7 @@ const FormList: React.FC<FormListProp> = ({
                       >
                         {/* <div
                     key={form.FormId}
-                    onClick={() => handleClickformName(form)}
+                    onClick={() => handleClickFormName(form)}
                   >
                     <img
                       src={formIcon}
@@ -706,7 +706,7 @@ const FormList: React.FC<FormListProp> = ({
                   </div> */}
                         <div
                           key={form.formId}
-                          onClick={() => handleClickformName(form)}
+                          onClick={() => handleClickFormName(form)}
                         >
                           <img
                             src={formIcon}
