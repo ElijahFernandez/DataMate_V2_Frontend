@@ -8,6 +8,7 @@ interface FormPageProps {
   stopLoading: () => void;
 }
 
+// Define the FormEntity interface
 interface FormEntity {
     formId: number;
     dbName: string;
@@ -20,45 +21,51 @@ interface FormEntity {
 
 export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const loc = useLocation();
-  const formid = loc.state.formid;
-  const [formId, setFormId] = useState<number | null>(null);
-  const [formName, setFormName] = useState("");
-  const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
+  const formIdFromLocation = loc.state?.formid || null;  // Get formId from location state
+  const [formEntity, setFormEntity] = useState<FormEntity | null>(null); // To store the fetched form data
+  const [formId, setFormId] = useState<number | null>(formIdFromLocation); // Initially set from location state
 
-async function getFormEntity(formId: number): Promise<FormEntity | null> {
+  // Fetch the form entity from the API
+  async function getFormEntity(formId: number): Promise<FormEntity | null> {
     try {
-    const response = await axios.get(`http://localhost:8080/getUserForms/${formId}`);
-    return response.data;
+      const response = await axios.get(`http://localhost:8080/getForms/${formId}`);
+      return response.data;
     } catch (error) {
-    console.error("Error fetching form entity:", error);
-    return null;
+      console.error("Error fetching form entity:", error);
+      return null;
     }
-}
-  
-   // Fetch the form entity once, and update the formId and formName
-   // Use effect to fetch form entity on component mount
-   useEffect(() => {
+  }
+
+  // useEffect to fetch the form data on component mount or when formId changes
+  useEffect(() => {
     const fetchFormEntity = async () => {
-      startLoading();
-      const entity = await getFormEntity(formid);
-      if (entity) {
-        setFormName(entity.formName);
-        setFormId(entity.formId); // Update reportId here
-        console.log("Fetched Report Entity:", entity);
+        console.log("form id: ", formId);
+      if (formId) {  // Only fetch if formId exists
+        startLoading();
+        const entity = await getFormEntity(formId);
+        if (entity) {
+          setFormEntity(entity);  // Set the fetched form data to formEntity
+          console.log("Fetched Form Entity:", entity);
+        }
+        stopLoading();
       }
-    console.log("Form ID: ", formid);
-      stopLoading();
     };
+
     fetchFormEntity();
-  }, [formId]);
+  }, [formId, startLoading, stopLoading]);
 
   return (
     <div>
       <h2>Form Entity Details</h2>
       {formEntity ? (
         <div>
-          <p><strong>Form ID:</strong> {formId}</p>
-          <p><strong>Form Name:</strong> {formName}</p>
+          <p><strong>Form ID:</strong> {formEntity.formId}</p>
+          <p><strong>Form Name:</strong> {formEntity.formName}</p>
+          <p><strong>DB Name:</strong> {formEntity.dbName}</p>
+          <p><strong>Headers:</strong> {formEntity.headers}</p>
+          <p><strong>Custom Settings:</strong> {formEntity.customSettings}</p>
+          <p><strong>User ID:</strong> {formEntity.userId}</p>
+          <p><strong>Created At:</strong> {formEntity.createdAt}</p>
         </div>
       ) : (
         <p>Loading form data...</p>
