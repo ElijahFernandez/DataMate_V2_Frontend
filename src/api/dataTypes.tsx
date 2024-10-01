@@ -49,12 +49,14 @@ export interface ReportEntity {
 }
 
 export interface FormEntity {
-  formId: number;
-  formName: string,
-  userId: string;
+  formId?: number;
+  dbName: string;
+  formName: string;
+  headers: string;
+  customSettings: string;
+  userId: number;
+  createdAt: string;
 }
-
-
 
 export interface FileActivityLogEntity {
   logId: number;

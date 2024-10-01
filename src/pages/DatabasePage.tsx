@@ -23,6 +23,7 @@ import FormPrompt from "../prompts/FormPrompt";
 import { FormHeaders } from "../api/dataTypes";
 import ReportPrompt from "../prompts/ReportPrompt";
 import InsertFormPrompt from "../prompts/InsertFormPrompt";
+import FormDetailsPrompt from "../prompts/FormDetailsPrompt";
 
 type DatabasePageProps = {
   stopLoading: () => void;
@@ -112,6 +113,8 @@ export default function DatabasePage({
   const handleOpen = () => setFormOpen(true);
   const [showInsertForm, setShowInsertForm] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [formName, setFormName] = useState("");
+  const [formType, setFormType] = useState("");
 
   const handleClose = () => {
     setFormOpen(false);
@@ -913,12 +916,37 @@ export default function DatabasePage({
                     handleProcessingComplete();
                   }}
                   setProcessedHeaders={setProcessedHeaders}
+                  setFormType={setFormType}
                 />
               </Box>
             </Box>
           </Modal>
 
           <Modal
+            open={showInsertForm}
+            onClose={handleClose}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+          >
+            <Box sx={{ display: "flex" }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <FormDetailsPrompt
+                  startLoading={startLoading}
+                  stopLoading={stopLoading}
+                  onClose={() => {
+                    handleClose();
+                    handleProcessingComplete();
+                  }}
+                  setFormName={setFormName}
+                  dbName={Database}
+                  formType={formType}
+                  processedHeaders={processedHeaders}
+                  userId={userID}
+                />
+              </Box>
+            </Box>
+          </Modal>
+          {/* <Modal
             open={showInsertForm}
             onClose={handleInsertFormClose}
             aria-labelledby="insert-form-modal-title"
@@ -933,7 +961,7 @@ export default function DatabasePage({
                 />
               </Box>
             </Box>
-          </Modal>
+          </Modal> */}
 
            {/*Modal for reports*/}
            <Modal
