@@ -48,6 +48,13 @@ export interface ReportEntity {
   userId: string;
 }
 
+export interface FormEntity {
+  formId: number;
+  formName: string,
+  userId: string;
+}
+
+
 
 export interface FileActivityLogEntity {
   logId: number;

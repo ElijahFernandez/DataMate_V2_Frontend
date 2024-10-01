@@ -68,6 +68,7 @@ import GenerateForm from "./v2_components/GenerateFormPage";
 import LocalForm from "./v2_components/LocalForm";
 import ReportScreen from "./v2_components/ReportScreen";
 import ReportPage from "./v2_components/ReportPage";
+import FormScreen from "./v2_components/FormScreen";
 
 /* Customize default MUI theme */
 declare module "@mui/material/styles" {
@@ -218,6 +219,11 @@ function App() {
   const [selectedReportId, setSelectedReportId] = useState(0); // Initialize to 0 or any appropriate default value
   const setReportId = (id: number) => {
     setSelectedReportId(id);
+  };
+
+  const [selectedFormId, setSelectedFormId] = useState(0); // Initialize to 0 or any appropriate default value
+  const setFormId = (id: number) => {
+    setSelectedFormId(id);
   };
 
   const setFileData = (
@@ -778,6 +784,27 @@ function App() {
                     />
                     <Route
                       path="report"
+                      element={
+                        <PrivateRoute>
+                          <ReportPage startLoading={StartLoading} stopLoading={StopLoading} />
+                        </PrivateRoute>
+                      }
+                    />
+                  </Route>
+
+                  {/* nested for Forms */}
+                  <Route path="forms">  {/* parent url | localhost:3000/reports */}
+                    {" "}
+                    <Route
+                      index
+                      element={
+                        <PrivateRoute>
+                          <FormScreen setFormId={setFormId} />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="form"
                       element={
                         <PrivateRoute>
                           <ReportPage startLoading={StartLoading} stopLoading={StopLoading} />

@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import axios from 'axios';
 import { useEffect, useState } from "react";
-import { Box, Button, Paper, CircularProgress, Modal } from "@mui/material";
+import { Box, Button, Paper, CircularProgress, Modal, TextField } from "@mui/material";
 import ReactDataGrid from "@inovua/reactdatagrid-community";
 
 // Define props interface to include startLoading and stopLoading
@@ -42,6 +42,21 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const handleDeleteModalOpen = () => setDeleteModalOpen(true);
   const handleDeleteModalClose = () => setDeleteModalOpen(false);
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const handleRenameModalOpen = () => setRenameModalOpen(true);
+  const handleRenameModalClose = () => setRenameModalOpen(false);
+
+  const [newName, setNewName] = useState("");
+
+  const handleRenameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewName(event.target.value);
+  };
+
+  const handleRenameSubmit = () => {
+    handleRenameReport();
+    console.log("Rename: ", newName);
+    handleDeleteModalClose(); // Close the modal after renaming
+  };
 
   // Function to fetch the report entity from the backend
   async function getReportEntity(rprtid: number): Promise<ReportEntity | null> {
@@ -60,9 +75,23 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
         console.log("Delete Report Response:", response.data);
         handleDeleteModalClose(); // Close the modal after deletion
         alert("Report successfully deleted!");
-        window.location.href = "http://localhost:3000"; // Redirect to base URL
+        window.location.href = "http://localhost:3000/reports"; 
     } catch (error) {
       console.error("Error deleting report:", error);
+    }
+  };
+
+  const handleRenameReport = async () => {
+    try {
+      const response = await axios.put(`http://localhost:8080/rename/${reportId}`, {
+        newReportName: newName, // Pass the new report name
+      });
+      console.log("Rename Report Response:", response.data);
+      handleRenameModalClose(); // Close the modal after renaming
+      alert("Report successfully renamed!");
+      window.location.href = "http://localhost:3000/reports"; 
+    } catch (error) {
+      console.error("Error renaming report:", error);
     }
   };
 
@@ -148,6 +177,9 @@ useEffect(() => {
                   justifyContent: "flex-end",
                 }}
               >
+                <Button variant="outlined" onClick={handleRenameModalOpen} sx={{ margin: '10px' }}>
+                    RENAME REPORT
+                </Button>
                 <Button variant="outlined" onClick={handleDeleteModalOpen} sx={{ margin: '10px' }}>
                     DELETE REPORT
                 </Button>
@@ -226,6 +258,33 @@ useEffect(() => {
                 </Box>
                 </Box>
             </Box>
+            </Modal>
+            <Modal 
+            open={renameModalOpen} 
+            onClose={handleRenameModalClose} 
+            aria-labelledby="rename-modal-title" 
+            aria-describedby="rename-modal-description">
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+                <Box sx={{ bgcolor: "white", padding: "2em", borderRadius: "8px", boxShadow: 24, width: "400px" }}>
+                  <h2 id="rename-modal-title">Rename Report</h2>
+                  <p id="rename-modal-description">Enter a new name for the report below:</p>
+                  <TextField
+                    fullWidth
+                    label="New Report Name"
+                    value={newName}
+                    onChange={handleRenameChange}
+                    sx={{ marginBottom: "1.5em" }}
+                  />
+                  <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Button onClick={handleRenameModalClose} variant="outlined" sx={{ marginRight: '1em' }}>
+                    Cancel
+                    </Button>
+                    <Button onClick={handleRenameSubmit} variant="contained" color="primary">
+                      Rename
+                    </Button>
+                  </Box>  
+                </Box>
+              </Box>
             </Modal>
           </Box>
     </>
