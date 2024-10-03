@@ -17,6 +17,7 @@ import { RootState } from "../helpers/Store";
 import { Height, Opacity } from "@mui/icons-material";
 import axios from "axios";
 import { FormEntity } from "../api/dataTypes";
+import { Toaster, toast } from "react-hot-toast";
 
 interface ProcessedFormHeaders {
   headerName: string;
@@ -30,6 +31,7 @@ type FormDetailsProps = {
   setFormName: React.Dispatch<React.SetStateAction<string>>;
   formType: string;
   dbName: string;
+  tblName: string;
   processedHeaders: ProcessedFormHeaders[] | undefined;
   userId: number;
 };
@@ -72,16 +74,16 @@ const styles = {
   },
 };
 
-
 const FormDetailsPrompt = ({
   startLoading,
   stopLoading,
   onClose,
   setFormName,
   dbName,
+  tblName,
   formType,
   processedHeaders,
-  userId
+  userId,
 }: FormDetailsProps) => {
   const drop = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
@@ -90,7 +92,6 @@ const FormDetailsPrompt = ({
   const processInsertHeaders = async () => {};
   const [localFormName, setLocalFormName] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
 
   const handleSubmit = async () => {
     if (!localFormName || !dbName) {
@@ -104,13 +105,15 @@ const FormDetailsPrompt = ({
 
     try {
       // Convert processedHeaders to the format that worked in Postman
-      const headersObject = processedHeaders?.reduce((acc, header) => {
-        acc[header.headerName] = header.headerValue;
-        return acc;
-      }, {} as Record<string, string>) || {};
+      const headersObject =
+        processedHeaders?.reduce((acc, header) => {
+          acc[header.headerName] = header.headerValue;
+          return acc;
+        }, {} as Record<string, string>) || {};
 
       const formData: FormEntity = {
         dbName: dbName,
+        tblName: tblName,
         formName: localFormName,
         headers: JSON.stringify(headersObject),
         customSettings: JSON.stringify({ theme: "light" }), // You can modify this as needed
@@ -120,33 +123,48 @@ const FormDetailsPrompt = ({
 
       console.log("Sending form data:", formData);
       console.log("user id:", userId);
-      const response = await axios.post<FormEntity>('http://localhost:8080/postForms', formData, {
-        headers: {
-          'Content-Type': 'application/json'
+      const response = await axios.post<FormEntity>(
+        "http://localhost:8080/postForms",
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
-      });
+      );
+      
+      const createdFormId = response.data.formId;
 
       console.log("Form created successfully:", response.data);
       setFormName(localFormName);
       onClose();
+
+      // Navigate to the newly created form
+      nav(`/forms/${createdFormId}`); // Dynamic navigation based on the formId
     } catch (error) {
       console.error("Error creating form:", error);
       if (axios.isAxiosError(error)) {
-        setErrorMessage(`Failed to create form: ${error.response?.data?.message || error.message}`);
+        setErrorMessage(
+          `Failed to create form: ${
+            error.response?.data?.message || error.message
+          }`
+        );
       } else {
         setErrorMessage("An unexpected error occurred. Please try again.");
       }
     } finally {
       setIsProcessing(false);
+      stopLoading();
     }
   };
-
 
   return (
     <Box sx={modalStyle}>
       <div ref={drop} className="dropArea">
         <div className="uploadTextContainer">
-          <Typography variant="h6">CREATE {formType.toUpperCase()} FORM</Typography>
+          <Typography variant="h6">
+            CREATE {formType.toUpperCase()} FORM
+          </Typography>
           <Typography variant="h6">Database selected: {dbName}</Typography>
           <Divider sx={styles.divider} />
           <TextField

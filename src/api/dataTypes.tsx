@@ -51,6 +51,7 @@ export interface ReportEntity {
 export interface FormEntity {
   formId?: number;
   dbName: string;
+  tblName: string;
   formName: string;
   headers: string;
   customSettings: string;

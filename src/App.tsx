@@ -804,11 +804,11 @@ function App() {
                         </PrivateRoute>
                       }
                     />
-                    <Route
-                      path="form"
+                    <Route 
+                      path=":formId"
                       element={
                         <PrivateRoute>
-                          <FormPage startLoading={StartLoading} stopLoading={StopLoading} />
+                          <FormPage  startLoading={StartLoading} stopLoading={StopLoading} />
                         </PrivateRoute>
                       }
                     />

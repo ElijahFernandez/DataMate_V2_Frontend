@@ -939,6 +939,7 @@ export default function DatabasePage({
                   }}
                   setFormName={setFormName}
                   dbName={Database}
+                  tblName={currentTbl}
                   formType={formType}
                   processedHeaders={processedHeaders}
                   userId={userID}
