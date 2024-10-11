@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import trashBinImage from "../images/Trashbin.png";
+import axios from "axios";
 import {
   Button,
   MenuItem,
@@ -10,6 +11,9 @@ import {
   Box,
   CircularProgress,
   Menu,
+  Modal,
+  Typography,
+
 } from "@mui/material";
 import Popover from "@mui/material/Popover";
 import List from "@mui/material/List";
@@ -35,6 +39,18 @@ import CryptoJS from "crypto-js";
 
 type FormId = string;
 
+const modalStyle = {
+  position: "absolute" as "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 400,
+  bgcolor: "background.paper",
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 1,
+  backdropFilter: "brightness(1.2)", // Make the background lighter
+};
 //Importfile
 type FormListProp = {
   setFormId: (num: number) => void;
@@ -70,7 +86,6 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
   const nav = useNavigate();
   const [isLoading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false); // State for controlling the modal visibility
-
 
   // const itemsPerRow = Math.min(searchResult.length, 3); // Maximum 3 items per row
   const itemsPerRow = Math.min(forms?.length, 3);
@@ -239,7 +254,7 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
     setAnchorE2(null);
   };
 
-  // Close triple dot menu from 
+  // Close triple dot menu from
   const handleCloseMenu = () => {
     setAnchorEl3(null); // Close menu
   };
@@ -766,7 +781,51 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                       </div>
                     </div>
                   </Grid>
-
+                  <Modal
+                    open={openModal}
+                    onClose={() => setOpenModal(false)} // Close the modal on backdrop click
+                  >
+                    <Box sx={modalStyle}>
+                      <Typography variant="h6" gutterBottom>
+                        Are you sure you want to delete this form?
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          mt: 2,
+                        }}
+                      >
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          onClick={async () => {
+                            try {
+                              const response = await axios.delete(
+                                `http://localhost:8080/deleteForm`,
+                                { params: { formId: form.formId } }
+                              );
+                              console.log(response.data); // Optionally log the success message
+                              setOpenModal(false); // Close modal after deletion
+                                window.location.reload(); // Refresh the page
+                            } catch (error) {
+                              console.error("Error deleting form:", error);
+                              // You can handle the error (e.g., show a notification)
+                            }
+                          }}
+                          sx={{ mr: 2 }}
+                        >
+                          Yes
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          onClick={() => setOpenModal(false)} // Close modal without deleting
+                        >
+                          No
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Modal>
                   <Grid
                     style={{
                       marginTop: "0.5rem",

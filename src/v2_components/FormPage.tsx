@@ -13,16 +13,17 @@ import {
   Menu,
   MenuItem,
   Modal,
+  Popover,
 } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert"; // Add this for the triple-dot icon
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import TrashIcon from "@mui/icons-material/Delete";
 
-// Define props interface to include startLoading and stopLoading
 interface FormPageProps {
   startLoading: () => void;
   stopLoading: () => void;
 }
 
-// Define the FormEntity interface
 interface FormEntity {
   formId: number;
   dbName: string;
@@ -57,13 +58,12 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const formIdFromLocation = loc.state?.formid || null; // Get formId from location state
   const { formId } = useParams<{ formId: string }>();
   const [formData, setFormData] = useState<FormData>({});
-  const [formEntity, setFormEntity] = useState<FormEntity | null>(null); // To store the fetched form data
-
-  const [openModal, setOpenModal] = useState(false); // State for controlling the modal visibility
-
+  const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
+  const [openModal, setOpenModal] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-
+  const [anchorElEdit, setAnchorElEdit] = useState<null | HTMLElement>(null);
+  const openEdit = Boolean(anchorElEdit);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -72,14 +72,11 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         startLoading();
         setIsLoading(true);
         try {
-          const response = await axios.get(
-            `http://localhost:8080/getForms/${formId}`
-          );
+          const response = await axios.get(`http://localhost:8080/getForms/${formId}`);
           setFormEntity(response.data);
+          initializeFormData(response.data.headers); // Initialize form data here
           console.log("Fetched Form Entity:", response.data);
-          console.log("Fetched Form Entity:", response.data.tblName);
-
-          initializeFormData(response.data.headers);
+          console.log("Fetched Form Table name:", response.data.tblName);
         } catch (error) {
           console.error("Error fetching form entity:", error);
         } finally {
@@ -113,11 +110,17 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     event.preventDefault();
     console.log("Form data to submit:", formData);
 
+    const emptyFields = Object.values(formData).some((value) => value.trim() === "");
+    if (emptyFields) {
+      toast.error("Please fill out all the fields before submitting.");
+      return;
+    }
+
     const payload = {
       tableName: formEntity?.tblName,
       headers: Object.keys(formData),
       values: Object.values(formData),
-    }
+    };
 
     try {
       const response = await fetch("http://localhost:8080/insert", {
@@ -133,15 +136,30 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         toast.error("Failed to submit form.");
       }
     } catch (error) {
+      console.error("Error submitting form:", error);
     }
   };
 
-  // Function to handle triple-dot icon click
-  const handleOnClickIcon = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget); // Open menu on click
+  const handleEditClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorElEdit(event.currentTarget);
   };
+
+  const handleOnClickIcon = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseEditPop = () => {
+    setAnchorElEdit(null);
+  };
+
+  const handleEditPopOverClick = () => {
+    if (formEntity) {
+      navigate(`/forms/${formEntity.formId}/edit`);
+    }
+  };
+
   const handleCloseMenu = () => {
-    setAnchorEl(null); // Close menu
+    setAnchorEl(null);
   };
 
   if (isLoading) {
@@ -153,61 +171,61 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   }
 
   const headers = JSON.parse(formEntity.headers);
-  // Fetch the form entity from the API
-  // async function getFormEntity(formId: number): Promise<FormEntity | null> {
-  //   try {
-  //     const response = await axios.get(
-  //       `http://localhost:8080/getForms/${formId}`
-  //     );
-  //     return response.data;
-  //   } catch (error) {
-  //     console.error("Error fetching form entity:", error);
-  //     return null;
-  //   }
-  // }
-
-  // // useEffect to fetch the form data on component mount or when formId changes
-  // useEffect(() => {
-  //   const fetchFormEntity = async () => {
-  //     console.log("form id: ", formId);
-  //     if (formId) {
-  //       // Only fetch if formId exists
-  //       startLoading();
-  //       const entity = await getFormEntity(formId);
-  //       if (entity) {
-  //         setFormEntity(entity); // Set the fetched form data to formEntity
-  //         console.log("Fetched Form Entity:", entity);
-  //       }
-  //       stopLoading();
-  //     }
-  //   };
-
-  //   fetchFormEntity();
-  // }, [formId, startLoading, stopLoading]);
 
   return (
     <Box sx={{ maxWidth: 600, margin: "auto", mt: 15 }}>
-      <Paper elevation={3} sx={{ p: 3, position: "relative" }}>
-        <IconButton
-          sx={{ position: "absolute", top: 8, right: 8 }}
-          onClick={handleOnClickIcon}
-        >
-          <MoreVertIcon />
-        </IconButton>
+      <Toaster />
+      <IconButton sx={{ position: "absolute", top: 80, right: 20 }} onClick={handleOnClickIcon}>
+        <MoreVertIcon />
+      </IconButton>
 
-        {/* Menu for the triple-dot icon */}
-        <Menu anchorEl={anchorEl} open={open} onClose={handleCloseMenu}>
-          <MenuItem onClick={async () => {}}>Edit</MenuItem>
-          <MenuItem
-            onClick={() => {
-              setOpenModal(true);
-              handleCloseMenu();
-            }}
-          >
-            Delete
-          </MenuItem>
-        </Menu>
-        
+      <Menu anchorEl={anchorEl} open={open} onClose={handleCloseMenu}>
+        <MenuItem
+          onClick={() => {
+            setOpenModal(true);
+            handleCloseMenu();
+          }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
+      <Paper elevation={3} sx={{ p: 3, position: "relative" }}>
+        <Popover
+          open={openEdit}
+          anchorEl={anchorElEdit}
+          onClose={handleCloseEditPop}
+          anchorOrigin={{
+            vertical: "top",
+            horizontal: "right",
+          }}
+          transformOrigin={{
+            vertical: "bottom",
+            horizontal: "left",
+          }}
+          sx={{
+            ".MuiPaper-root": {
+              borderRadius: "20px",
+              p: 2,
+            },
+          }}
+        >
+          <Typography variant="body1">Do you want to edit?</Typography>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
+            <Button
+              onClick={() => {
+                handleEditPopOverClick();
+                handleCloseEditPop();
+              }}
+              sx={{ mr: 2 }}
+            >
+              Edit
+            </Button>
+            <Button onClick={handleCloseEditPop} variant="outlined">
+              Cancel
+            </Button>
+          </Box>
+        </Popover>
+
         <Typography variant="h4" gutterBottom>
           {formEntity.formName}
         </Typography>
@@ -235,9 +253,27 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           </Button>
         </form>
       </Paper>
+
+      <Box
+        onClick={handleEditClick}
+        sx={{
+          position: "absolute",
+          bottom: 50,
+          right: 50,
+          bgcolor: "primary.main",
+          borderRadius: "50%",
+          p: 1,
+          cursor: "pointer",
+        }}
+      >
+        <IconButton sx={{ color: "white" }}>
+          <EditIcon sx={{ fontSize: 30 }} />
+        </IconButton>
+      </Box>
+
       <Modal
         open={openModal}
-        onClose={() => setOpenModal(false)} // Close the modal on backdrop click
+        onClose={() => setOpenModal(false)}
       >
         <Box sx={modalStyle}>
           <Typography variant="h6" gutterBottom>
@@ -253,22 +289,18 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
                     `http://localhost:8080/deleteForm`,
                     { params: { formId: formEntity?.formId } }
                   );
-                  console.log(response.data); // Optionally log the success message
-                  setOpenModal(false); // Close modal after deletion
-                  navigate("/forms"); // Redirect to the /forms path
+                  console.log(response.data);
+                  setOpenModal(false);
+                  navigate("/forms");
                 } catch (error) {
                   console.error("Error deleting form:", error);
-                  // You can handle the error (e.g., show a notification)
                 }
               }}
               sx={{ mr: 2 }}
             >
               Yes
             </Button>
-            <Button
-              variant="outlined"
-              onClick={() => setOpenModal(false)} // Close modal without deleting
-            >
+            <Button variant="outlined" onClick={() => setOpenModal(false)}>
               No
             </Button>
           </Box>

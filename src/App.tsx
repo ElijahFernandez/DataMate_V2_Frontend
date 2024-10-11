@@ -70,6 +70,7 @@ import ReportScreen from "./v2_components/ReportScreen";
 import ReportPage from "./v2_components/ReportPage";
 import FormScreen from "./v2_components/FormScreen";
 import FormPage from "./v2_components/FormPage";
+import FormEditPage from "./v2_components/FormEditPage"; 
 
 /* Customize default MUI theme */
 declare module "@mui/material/styles" {
@@ -809,6 +810,14 @@ function App() {
                       element={
                         <PrivateRoute>
                           <FormPage  startLoading={StartLoading} stopLoading={StopLoading} />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route 
+                      path=":formId/edit"
+                      element={
+                        <PrivateRoute>
+                          <FormEditPage startLoading={StartLoading} stopLoading={StopLoading} />
                         </PrivateRoute>
                       }
                     />
