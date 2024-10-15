@@ -6,48 +6,44 @@ import {
   Radio,
   RadioGroup,
   FormControl,
-  FormControlLabel,
   InputLabel,
   MenuItem,
   Select,
   SelectChangeEvent,
 } from "@mui/material";
-import { useEffect } from "react";
-import { CustomSettings } from "../services/CustomSettingsService";
+import { useEffect, useState } from "react";
+import { CustomSettings } from "../api/dataTypes";
 
 interface SidebarProps {
   selectedField: string | null; // Keep this for context
   selectedFieldType: string | null;
-  styles: any;
-  setStyles: (newStyles: any) => void;
   customSettings: CustomSettings;
-  updateCustomSetting: (key: keyof CustomSettings, value: string | number) => void;
+  setCustomSettings: (settings: CustomSettings) => void;
 }
 
 export default function Sidebar({
   selectedField,
   selectedFieldType,
-  styles,
-  setStyles,
-  customSettings,
-  updateCustomSetting,
+  customSettings, // here customSettings came from the parent comp which came from the db
+  setCustomSettings,
 }: SidebarProps) {
-  
-  const handleStyleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>,
-    styleProp: string
-  ) => {
-    const value = e.target.value;
-    setStyles({ [styleProp]: value });
-  };
+  const [formTitleAlign, setFormTitleAlign] = useState<
+    "center" | "left" | "right"
+  >("left");
+  const [buttonWidth, setButtonWidth] = useState<string>("100");
+  const [buttonAlign, setButtonAlign] = useState<"center" | "left" | "right">(
+    "left"
+  );
 
-  const handleCustomSettingChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>,
-    key: keyof CustomSettings
-  ) => {
-    const value = e.target.value;
-    updateCustomSetting(key, value);
-  };
+  useEffect(() => {
+    console.log("Retrieved custom settings:", customSettings);
+    // Initialize state values based on customSettings when component mounts
+    if (customSettings) {
+      setFormTitleAlign(customSettings.form_title_align || "left");
+      setButtonWidth(customSettings.submit_button_width || "100");
+      setButtonAlign(customSettings.submit_button_align || "left");
+    }
+  }, [customSettings]);
 
   useEffect(() => {
     console.log("Selected Field:", selectedField);
@@ -58,24 +54,31 @@ export default function Sidebar({
       <Typography variant="subtitle1" gutterBottom>
         Form Title Settings
       </Typography>
-      <TextField
-        label="Font Size"
-        type="number"
-        value={customSettings.form_title_fontsize}
-        onChange={(e) => handleCustomSettingChange(e, 'form_title_fontsize')}
-        fullWidth
-        margin="normal"
-      />
       <FormControl fullWidth margin="normal">
         <InputLabel>Alignment</InputLabel>
         <Select
-          value={customSettings.form_title_align || 'left'}
-          onChange={(e) => handleCustomSettingChange(e, 'form_title_align')}
+          value={formTitleAlign}
+          onChange={(event: SelectChangeEvent<string>) =>
+            setFormTitleAlign(event.target.value as "center" | "left" | "right")
+          }
         >
           <MenuItem value="left">Left</MenuItem>
           <MenuItem value="center">Center</MenuItem>
           <MenuItem value="right">Right</MenuItem>
         </Select>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mt: 2 }}
+          onClick={() =>
+            setCustomSettings({
+              ...customSettings,
+              form_title_align: formTitleAlign,
+            })
+          }
+        >
+          Apply
+        </Button>
       </FormControl>
     </>
   );
@@ -85,20 +88,11 @@ export default function Sidebar({
       <Typography variant="subtitle1" gutterBottom>
         Text Field Settings
       </Typography>
-      <TextField
-        label="Label Position"
-        value={styles.labelPosition || ''}
-        onChange={(e) => handleStyleChange(e, 'labelPosition')}
-        fullWidth
-        margin="normal"
-      />
-      <TextField
-        label="Field Width"
-        value={styles.width || ''}
-        onChange={(e) => handleStyleChange(e, 'width')}
-        fullWidth
-        margin="normal"
-      />
+      <TextField label="Label Position" fullWidth margin="normal" />
+      <TextField label="Field Width" fullWidth margin="normal" />
+      <Button variant="contained" color="primary" sx={{ mt: 2 }}>
+        Apply
+      </Button>
     </>
   );
 
@@ -107,23 +101,32 @@ export default function Sidebar({
       <Typography variant="subtitle1" gutterBottom>
         Submit Button Settings
       </Typography>
-      <TextField
-        label="Button Width"
-        value={customSettings.submit_button_width}
-        onChange={(e) => handleCustomSettingChange(e, 'submit_button_width')}
-        fullWidth
-        margin="normal"
-      />
+      <TextField label="Button Width" fullWidth margin="normal" />
       <FormControl fullWidth margin="normal">
         <InputLabel>Button Alignment</InputLabel>
         <Select
-          value={customSettings.submit_button_align}
-          onChange={(e) => handleCustomSettingChange(e, 'submit_button_align')}
+          value={buttonAlign}
+          onChange={(event: SelectChangeEvent<string>) =>
+            setButtonAlign(event.target.value as "center" | "left" | "right")
+          }
         >
           <MenuItem value="left">Left</MenuItem>
           <MenuItem value="center">Center</MenuItem>
           <MenuItem value="right">Right</MenuItem>
         </Select>
+        <Button
+            variant="contained"
+            color="primary"
+            sx={{ mt: 2 }}
+            onClick={() =>
+              setCustomSettings({
+                ...customSettings,
+                submit_button_align: buttonAlign,
+              })
+            }
+          >
+            Apply
+          </Button>
       </FormControl>
     </>
   );
@@ -153,13 +156,17 @@ export default function Sidebar({
         </Typography>
       )}
 
-      {selectedFieldType === 'form title' && renderFormTitleSettings()}
-      {selectedFieldType === 'textfield' && renderTextFieldSettings()}
-      {selectedFieldType === 'button' && renderButtonSettings()}
-
-      <Button variant="contained" color="primary" sx={{ mt: 2 }}>
-        Apply
-      </Button>
+      {selectedFieldType === "form title" && renderFormTitleSettings()}
+      {selectedFieldType === "textfield" && renderTextFieldSettings()}
+      {selectedFieldType === "button" && renderButtonSettings()}
+      {/* <Button
+        variant="contained"
+        color="secondary"
+        sx={{ mt: 2 }}
+        onClick={() => console.log("Form Title Alignment:", formTitleAlign)}
+      >
+        Print Form Title Alignment
+      </Button> */}
     </Box>
   );
 }

@@ -8,7 +8,10 @@ import {
   Divider,
   CircularProgress,
   TextField,
+  IconButton,
 } from "@mui/material";
+import { Close } from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
 import { styled } from "@mui/system";
 import modalStyle from "../styles/ModalStyles";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +19,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../helpers/Store";
 import { Height, Opacity } from "@mui/icons-material";
 import axios from "axios";
-import { FormEntity } from "../api/dataTypes";
+import { FormEntity, CustomSettings } from "../api/dataTypes";
 import { Toaster, toast } from "react-hot-toast";
 
 interface ProcessedFormHeaders {
@@ -37,6 +40,26 @@ type FormDetailsProps = {
 };
 
 const styles = {
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: "#DCF1EC",
+    padding: "25px",
+    borderRadius: "10px",
+    position: "relative",
+    maxWidth: "500px",
+    width: "90%",
+  },
   dialogPaper: {
     backgroundColor: "#DCF1EC",
     padding: "25px",
@@ -72,6 +95,12 @@ const styles = {
     flexDirection: "column",
     color: "white",
   },
+  closeButton: {
+    position: "absolute",
+    color: "black",
+    top: "10px",
+    right: "10px",
+  },
 };
 
 const FormDetailsPrompt = ({
@@ -89,9 +118,16 @@ const FormDetailsPrompt = ({
   const nav = useNavigate();
   // const userId = useSelector((state: RootState) => state.auth.userId);
   const [isProcessing, setIsProcessing] = useState(false);
-  const processInsertHeaders = async () => {};
   const [localFormName, setLocalFormName] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const defaultCustomSettings: CustomSettings = {
+    theme: "light",
+    form_title_align: "left",
+    submit_button_width: "100",
+    submit_button_align: "left",
+    definition: "",
+  };
 
   const handleSubmit = async () => {
     if (!localFormName || !dbName) {
@@ -116,7 +152,7 @@ const FormDetailsPrompt = ({
         tblName: tblName,
         formName: localFormName,
         headers: JSON.stringify(headersObject),
-        customSettings: JSON.stringify({ theme: "light" }), // You can modify this as needed
+        customSettings: JSON.stringify(defaultCustomSettings), // You can modify this as needed
         userId: userId,
         createdAt: new Date().toISOString(), // Use current date-time
       };
@@ -132,7 +168,7 @@ const FormDetailsPrompt = ({
           },
         }
       );
-      
+
       const createdFormId = response.data.formId;
 
       console.log("Form created successfully:", response.data);
@@ -158,42 +194,57 @@ const FormDetailsPrompt = ({
     }
   };
 
+  const handleExit = () => {
+    onClose();
+  };
+
   return (
-    <Box sx={modalStyle}>
-      <div ref={drop} className="dropArea">
-        <div className="uploadTextContainer">
-          <Typography variant="h6">
-            CREATE {formType.toUpperCase()} FORM
-          </Typography>
-          <Typography variant="h6">Database selected: {dbName}</Typography>
-          <Divider sx={styles.divider} />
-          <TextField
-            label="Form Name"
-            variant="outlined"
-            fullWidth
-            onChange={(e) => setLocalFormName(e.target.value)} // Update local state on change
-            sx={{ marginBottom: "10px" }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            component="label"
-            style={styles.uploadButton}
-            onClick={handleSubmit}
+    <div style={styles.modalOverlay as React.CSSProperties}>
+      <div style={styles.modalContent as React.CSSProperties}>
+        <Box sx={modalStyle}>
+          <IconButton
+            style={styles.closeButton as React.CSSProperties}
+            onClick={handleExit}
+            aria-label="close"
           >
-            create form
-          </Button>
-        </div>
+            <Close />
+          </IconButton>
+          <div ref={drop} className="dropArea">
+            <div className="uploadTextContainer">
+              <Typography variant="h6">
+                CREATE {formType.toUpperCase()} FORM
+              </Typography>
+              <Typography variant="h6">Database selected: {dbName}</Typography>
+              <Divider sx={styles.divider} />
+              <TextField
+                label="Form Name"
+                variant="outlined"
+                fullWidth
+                onChange={(e) => setLocalFormName(e.target.value)} // Update local state on change
+                sx={{ marginBottom: "10px" }}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                component="label"
+                style={styles.uploadButton}
+                onClick={handleSubmit}
+              >
+                create form
+              </Button>
+            </div>
+          </div>
+          {isProcessing && (
+            <div style={styles.processingOverlay as React.CSSProperties}>
+              <CircularProgress color="inherit" />
+              <Typography variant="h6" style={{ marginTop: "20px" }}>
+                Navigating to Form...
+              </Typography>
+            </div>
+          )}
+        </Box>
       </div>
-      {isProcessing && (
-        <div style={styles.processingOverlay as React.CSSProperties}>
-          <CircularProgress color="inherit" />
-          <Typography variant="h6" style={{ marginTop: "20px" }}>
-            Navigating to Form...
-          </Typography>
-        </div>
-      )}
-    </Box>
+    </div>
   );
 };
 

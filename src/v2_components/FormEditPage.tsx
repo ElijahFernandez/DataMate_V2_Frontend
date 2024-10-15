@@ -1,12 +1,11 @@
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import Sidebar from "../components/Sidebar"; // Import the Sidebar component
 import SaveIcon from "@mui/icons-material/Save"; // Import the Edit icon
-import CustomSettingsManager, {
-  CustomSettings,
-} from "../services/CustomSettingsService"; // Import the CustomSettingsManager and CustomSettings
+import CustomSettingsManager from "../services/CustomSettingsService"; // Import the CustomSettingsManager and CustomSettings
+import { CustomSettings } from "../api/dataTypes";
 
 import {
   Box,
@@ -62,36 +61,18 @@ export default function FormEditPage({
   const loc = useLocation();
   const navigate = useNavigate();
 
-  const [customSettings, setCustomSettings] = useState<CustomSettings>({
-    theme: "",
-    form_title_fontsize: "",
-    form_title_align: "left",
-    submit_button_width: "",
-    submit_button_align: "left",
-  });
-
-  const updateCustomSetting = (key: keyof CustomSettings, value: string | number) => {
-    setCustomSettings(prevSettings => ({
-      ...prevSettings,
-      [key]: value
-    }));
-  };
-  
-  const settingsManagerRef = useRef(CustomSettingsManager);
-
   const formIdFromLocation = loc.state?.formid || null; // Get formId from location state
   const { formId } = useParams<{ formId: string }>();
   const [formData, setFormData] = useState<FormData>({});
   const [formEntity, setFormEntity] = useState<FormEntity | null>(null); // To store the fetched form data
 
   const [openModal, setOpenModal] = useState(false); // State for controlling the modal visibility
+  const [openSaveModal, setOpenSaveModal] = useState(false);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
   const [isLoading, setIsLoading] = useState(true);
-
-  const [editMode, inEditMode] = useState(true);
 
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<string | null>(
@@ -105,6 +86,31 @@ export default function FormEditPage({
   const [definition, setDefinition] = useState(""); // State to store the user's definition
   const [tempDefinition, setTempDefinition] = useState(""); // Temporary state for input
 
+  const settingsManagerRef = useRef(CustomSettingsManager);
+
+  const [customSettings, setCustomSettings] = useState<CustomSettings>({
+    theme: "",
+    form_title_align: "left",
+    submit_button_width: "",
+    submit_button_align: "left",
+    definition: "",
+  });
+
+  // useEffect to fetch custom settings and is stored to customSettings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        await settingsManagerRef.current.fetchSettings(Number(formId)); // Wait for fetch to complete
+        const fetchedSettings = settingsManagerRef.current.getSettings();
+        setCustomSettings(fetchedSettings);
+        console.log("Fetched and updated custom settings:", fetchedSettings); // Log right after setting the state
+      } catch (error) {
+        console.error("Error fetching custom settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
   // useEffect to fetch form entity
   useEffect(() => {
     const fetchFormEntityAndSettings = async () => {
@@ -115,16 +121,8 @@ export default function FormEditPage({
           const formResponse = await axios.get(
             `http://localhost:8080/getForms/${formId}`
           );
-          await settingsManagerRef.current.fetchSettings(Number(formId)); // Wait for fetch to complete
-
           setFormEntity(formResponse.data);
-          setCustomSettings(settingsManagerRef.current.getSettings()); // Now get the settings
-
-          console.log("Fetched Form Entity:", formResponse.data);
-          console.log(
-            "Fetched Custom Settings:",
-            settingsManagerRef.current.getSettings()
-          );
+          // console.log("Fetched Form Entity:", formResponse.data);
         } catch (error) {
           console.error("Error fetching form entity or settings:", error);
         } finally {
@@ -138,18 +136,18 @@ export default function FormEditPage({
   }, [formId, startLoading, stopLoading]);
 
   // useEffect to handle clicks outside of form
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (formRef.current && !formRef.current.contains(event.target as Node)) {
-        handleFieldClick("", "");
-      }
-    };
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (formRef.current && !formRef.current.contains(event.target as Node)) {
+  //       handleFieldClick("", "");
+  //     }
+  //   };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, []);
 
   const handleAddClick = () => {
     setAddingDefinition(true); // Show the input field
@@ -163,15 +161,11 @@ export default function FormEditPage({
   const handleOkClick = () => {
     setDefinition(tempDefinition); // Save the input as the new definition
     setAddingDefinition(false); // Revert to showing the definition as typography
-  };
-
-  const handleEditClick = () => {
-    // inEditMode(!editMode); // Toggle the edit mode
-  };
-
-  const handlePaperClick = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    handleFieldClick("form field", "form");
+    setCustomSettings({
+      // sets definition to customSettings for db to store
+      ...customSettings,
+      definition: tempDefinition,
+    });
   };
 
   const handleTextFieldClick = (event: React.MouseEvent, key: string) => {
@@ -179,11 +173,34 @@ export default function FormEditPage({
     handleFieldClick(key, "textfield");
   };
 
-  const handleFieldClick = (fieldName: string, fieldType: string) => {
+  const handleFieldClick = (
+    fieldName: string,
+    fieldType: string,
+    event?: React.MouseEvent
+  ) => {
+    if (event) {
+      event.stopPropagation();
+    }
     console.log("Selected Field clicked:", fieldName);
     console.log("Selected Field type:", fieldType);
     setSelectedField(fieldName);
     setSelectedFieldType(fieldType);
+  };
+
+  const handleSave = async () => {
+    console.log("Saving changes...");
+    console.log("Will Save Custom Settings:", customSettings);
+  
+    // Stringify the customSettings
+    const stringifiedSettings = JSON.stringify(customSettings);
+  
+    try {
+      await CustomSettingsManager.saveSettings(Number(formId), stringifiedSettings);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    }
+    navigate(`/forms/${formId}`);
+    setOpenSaveModal(false);
   };
 
   const handleOnClickIcon = (event: React.MouseEvent<HTMLElement>) => {
@@ -201,12 +218,19 @@ export default function FormEditPage({
     return <Typography>Form not found</Typography>;
   }
 
+  function formatLabel(label: string): string {
+    return label
+      .split("_") // Split the string by underscores
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
+      .join(" "); // Join the words back together with spaces
+  }
+
   const headers = JSON.parse(formEntity.headers);
 
   return (
     <Box sx={{ maxWidth: 600, margin: "auto", mt: 15 }} ref={formRef}>
       <Paper
-        onClick={handlePaperClick}
+        onClick={(e) => handleFieldClick("form field", "form", e)}
         elevation={3}
         sx={{
           p: 3,
@@ -232,17 +256,13 @@ export default function FormEditPage({
         >
           <Typography
             variant="h4"
-            sx={{
-              fontSize: fieldStyles["form title"]?.fontSize
-                ? `${fieldStyles["form title"].fontSize}px`
-                : undefined,
-              fontWeight: fieldStyles["form title"]?.fontWeight || undefined,
-            }}
             gutterBottom
+            align={customSettings.form_title_align} // set form title dynamically
           >
             {formEntity.formName}
           </Typography>
         </Box>
+
         {/* Conditionally render the definition input or the plus icon */}
         {!addingDefinition ? (
           <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
@@ -300,7 +320,7 @@ export default function FormEditPage({
               fullWidth
               margin="normal"
               name={key}
-              label={key as string}
+              label={formatLabel(key as string)}
               value={formData[key] || ""}
               // onChange={handleInputChange}
               // disabled
@@ -319,19 +339,35 @@ export default function FormEditPage({
             />
           </Box>
         ))}
-        <Button
-          // onClick={handleSubmit}
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent the event from bubbling
-            handleFieldClick("submit", "button"); // Handle field click when TextField is clicked
+        <Box
+          sx={{
+            display: "flex",
+            // set button alignment dynamically
+            justifyContent:
+              customSettings.submit_button_align === "left"
+                ? "flex-start"
+                : customSettings.submit_button_align === "right"
+                ? "flex-end"
+                : customSettings.submit_button_align === "center"
+                ? "center"
+                : "flex-start",
+            mt: 2,
           }}
-          type="submit"
-          variant="contained"
-          color="primary"
-          sx={{ mt: 2 }}
         >
-          Submit
-        </Button>
+          <Button
+            // onClick={handleSubmit}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent the event from bubbling
+              handleFieldClick("submit", "button"); // Handle field click when TextField is clicked
+            }}
+            type="submit"
+            variant="contained"
+            color="primary"
+            sx={{ width: customSettings.submit_button_width }} // Set width dynamically
+          >
+            Submit
+          </Button>
+        </Box>
       </Paper>
 
       {/* ------------------------------------------------------------ */}
@@ -379,21 +415,12 @@ export default function FormEditPage({
       <Sidebar
         selectedField={selectedField}
         selectedFieldType={selectedFieldType}
-        styles={selectedField ? fieldStyles[selectedField] || {} : {}}
-        setStyles={(newStyles: any) => {
-          if (selectedField) {
-            setFieldStyles((prev: any) => ({
-              ...prev,
-              [selectedField]: { ...prev[selectedField], ...newStyles },
-            }));
-          }
-        }}
         customSettings={customSettings}
-        updateCustomSetting={updateCustomSetting}
+        setCustomSettings={setCustomSettings}
       />
       {/* Edit Icon */}
       <Box
-        onClick={handleEditClick}
+        // onClick={handleEditClick}
         sx={{
           position: "absolute",
           bottom: 50,
@@ -406,7 +433,7 @@ export default function FormEditPage({
       >
         <Tooltip title="Save" placement="top" arrow>
           <IconButton
-            onClick={handleEditClick}
+            onClick={() => setOpenSaveModal(true)}
             sx={{
               color: "white", // Icon color
             }}
@@ -415,6 +442,36 @@ export default function FormEditPage({
           </IconButton>
         </Tooltip>
       </Box>
+      {/* Save Changes Modal */}
+      <Modal open={openSaveModal} onClose={() => setOpenSaveModal(false)}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6" gutterBottom>
+            Do you want to save changes?
+          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSave}
+              sx={{ mr: 2 }}
+            >
+              Yes
+            </Button>
+            <Button variant="outlined" onClick={() => setOpenSaveModal(false)}>
+              No
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+      <IconButton
+        onClick={() => console.log(customSettings)}
+        sx={{
+          color: "black", // Icon color
+          ml: 2, // Margin left to separate from the save icon
+        }}
+      >
+        <PlusIcon sx={{ fontSize: 30 }} />
+      </IconButton>
     </Box>
   );
 }

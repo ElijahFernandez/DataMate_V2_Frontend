@@ -70,3 +70,12 @@ export interface FileActivityLogEntity {
 export interface FormHeaders {
   headers: string[] | undefined;
 }
+
+export type CustomSettings = {
+  theme: string;
+  form_title_align: "center" | "left" | "right";
+  submit_button_width: string;
+  submit_button_align: "center" | "left" | "right";
+  definition: string;
+  [key: string]: string | number; // to allow more custom settings dynamically
+};

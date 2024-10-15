@@ -1,6 +1,6 @@
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import {
   Box,
@@ -18,6 +18,9 @@ import {
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import TrashIcon from "@mui/icons-material/Delete";
+
+import CustomSettingsManager from "../services/CustomSettingsService";
+import { CustomSettings } from "../api/dataTypes";
 
 interface FormPageProps {
   startLoading: () => void;
@@ -66,13 +69,40 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const openEdit = Boolean(anchorElEdit);
   const [isLoading, setIsLoading] = useState(true);
 
+  const settingsManagerRef = useRef(CustomSettingsManager);
+  const [customSettings, setCustomSettings] = useState<CustomSettings>({
+    theme: "",
+    form_title_fontsize: "",
+    form_title_align: "left",
+    submit_button_width: "",
+    submit_button_align: "left",
+    definition: "",
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        await settingsManagerRef.current.fetchSettings(Number(formId)); // Wait for fetch to complete
+        const fetchedSettings = settingsManagerRef.current.getSettings();
+        setCustomSettings(fetchedSettings);
+        console.log("Fetched and updated custom settings:", fetchedSettings); // Log right after setting the state
+      } catch (error) {
+        console.error("Error fetching custom settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
   useEffect(() => {
     const fetchFormEntity = async () => {
       if (formId) {
         startLoading();
         setIsLoading(true);
         try {
-          const response = await axios.get(`http://localhost:8080/getForms/${formId}`);
+          const response = await axios.get(
+            `http://localhost:8080/getForms/${formId}`
+          );
           setFormEntity(response.data);
           initializeFormData(response.data.headers); // Initialize form data here
           console.log("Fetched Form Entity:", response.data);
@@ -110,7 +140,9 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     event.preventDefault();
     console.log("Form data to submit:", formData);
 
-    const emptyFields = Object.values(formData).some((value) => value.trim() === "");
+    const emptyFields = Object.values(formData).some(
+      (value) => value.trim() === ""
+    );
     if (emptyFields) {
       toast.error("Please fill out all the fields before submitting.");
       return;
@@ -170,12 +202,23 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     return <Typography>Form not found</Typography>;
   }
 
+  // utility function to parse headers
+  function formatLabel(label: string): string {
+    return label
+      .split("_") // Split the string by underscores
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
+      .join(" "); // Join the words back together with spaces
+  }
+
   const headers = JSON.parse(formEntity.headers);
 
   return (
     <Box sx={{ maxWidth: 600, margin: "auto", mt: 15 }}>
       <Toaster />
-      <IconButton sx={{ position: "absolute", top: 80, right: 20 }} onClick={handleOnClickIcon}>
+      <IconButton
+        sx={{ position: "absolute", top: 80, right: 20 }}
+        onClick={handleOnClickIcon}
+      >
         <MoreVertIcon />
       </IconButton>
 
@@ -225,9 +268,15 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             </Button>
           </Box>
         </Popover>
-
-        <Typography variant="h4" gutterBottom>
+        <Typography
+          variant="h4"
+          gutterBottom
+          align={customSettings.form_title_align} // set form title dynamically
+        >
           {formEntity.formName}
+        </Typography>
+        <Typography variant="body1" gutterBottom>
+          {customSettings.definition}
         </Typography>
         <form onSubmit={handleSubmit}>
           {Object.entries(headers).map(([key, value]) => (
@@ -236,21 +285,37 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
               fullWidth
               margin="normal"
               name={key}
-              label={key as string}
+              label={formatLabel(key as string)}
               value={formData[key] || ""}
               onChange={handleInputChange}
               type={value as string}
             />
           ))}
-          <Button
-            onClick={handleSubmit}
-            type="submit"
-            variant="contained"
-            color="primary"
-            sx={{ mt: 2 }}
+          <Box
+            sx={{
+              display: "flex",
+              // set button alignment dynamically
+              justifyContent:
+                customSettings.submit_button_align === "left"
+                  ? "flex-start"
+                  : customSettings.submit_button_align === "right"
+                  ? "flex-end"
+                  : customSettings.submit_button_align === "center"
+                  ? "center"
+                  : "flex-start",
+              mt: 2,
+            }}
           >
-            Submit
-          </Button>
+            <Button
+              onClick={handleSubmit}
+              type="submit"
+              variant="contained"
+              color="primary"
+              sx={{ width: customSettings.submit_button_width }} // Set width dynamically
+            >
+              Submit
+            </Button>
+          </Box>
         </form>
       </Paper>
 
@@ -271,10 +336,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         </IconButton>
       </Box>
 
-      <Modal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-      >
+      <Modal open={openModal} onClose={() => setOpenModal(false)}>
         <Box sx={modalStyle}>
           <Typography variant="h6" gutterBottom>
             Are you sure you want to delete this form?

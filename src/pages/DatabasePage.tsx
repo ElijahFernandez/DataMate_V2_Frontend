@@ -22,7 +22,6 @@ import Chatbox from "../components/Chatbox";
 import FormPrompt from "../prompts/FormPrompt";
 import { FormHeaders } from "../api/dataTypes";
 import ReportPrompt from "../prompts/ReportPrompt";
-import InsertFormPrompt from "../prompts/InsertFormPrompt";
 import FormDetailsPrompt from "../prompts/FormDetailsPrompt";
 
 type DatabasePageProps = {
@@ -32,7 +31,7 @@ type DatabasePageProps = {
 
 type UserType = {
   userId: number;
-}
+};
 
 type DatabaseType = {
   databaseId: number;
@@ -103,35 +102,44 @@ export default function DatabasePage({
   let FirstColumns: string[] = [];
   const [isChatboxOpen, setIsChatboxOpen] = useState<boolean>(false);
 
-  
   //
   //
   //
   const [formHeaders, setFormHeaders] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const handleOpen = () => setFormOpen(true);
-  const [showInsertForm, setShowInsertForm] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [showDetailsForm, setShowDetailsForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("");
+  
+  const handleOpen = () => setFormOpen(true);
 
   const handleClose = () => {
     setFormOpen(false);
-    setIsProcessing(true); 
-  };
-  const handleClose2 = () => {
-    setFormOpen(false);
-    setShowInsertForm(false)
+    // setIsProcessing(true);
   };
 
+  const handleDetailsClose = () => {
+    setFormOpen(false);
+    setShowDetailsForm(false);
+  };
+
+  const handleFormTypeChange = (newFormType: string) => {
+    setFormType(newFormType);
+    handleClose();
+    // Only show the details form if a form type was selected
+    if (newFormType !== "") {
+      setShowDetailsForm(true);
+    }
+  };
   const handleInsertFormClose = (
     event: React.MouseEvent<HTMLElement>,
     reason: "backdropClick" | "escapeKeyDown" | "close"
   ) => {
     // Prevent the modal from closing on backdrop click
     if (reason !== "backdropClick") {
-      setShowInsertForm(false);
+      setShowDetailsForm(false);
     }
   };
 
@@ -139,12 +147,10 @@ export default function DatabasePage({
   const handleReportOpen = () => setReportOpen(true);
   const handleReportClose = () => {
     setReportOpen(false);
-  }
-
+  };
 
   useEffect(() => {
     if (isProcessing) {
-      
       const timer = setTimeout(() => {
         setIsProcessing(false);
       }, 3000);
@@ -155,10 +161,13 @@ export default function DatabasePage({
   const [processedHeaders, setProcessedHeaders] = useState<
     ProcessedFormHeaders[] | undefined
   >([]);
+
   const handleProcessingComplete = () => {
     setIsProcessing(false);
-    setShowInsertForm(true);
-    console.log("Show insert form" + showInsertForm);
+    setShowDetailsForm(true);
+
+    // setShowDetailsForm(true);
+    console.log("Show details form" + showDetailsForm);
   };
 
   // Function to convert formHeaders to JSON format
@@ -626,7 +635,6 @@ export default function DatabasePage({
     handleReportOpen();
   };
 
-
   const toggleImport = () => {
     // Implement this function if needed, or pass an empty function
     console.log("Toggle import");
@@ -694,13 +702,25 @@ export default function DatabasePage({
                   justifyContent: "flex-end",
                 }}
               >
-                <Button onClick={handleExport} variant="outlined" sx={{ margin: '10px' }}>
+                <Button
+                  onClick={handleExport}
+                  variant="outlined"
+                  sx={{ margin: "10px" }}
+                >
                   EXPORT TO SQL
                 </Button>
-                <Button onClick={handleChooseForm} variant="outlined" sx={{ margin: '10px' }}>
+                <Button
+                  onClick={handleChooseForm}
+                  variant="outlined"
+                  sx={{ margin: "10px" }}
+                >
                   SELECT FORMS
                 </Button>
-                <Button onClick={handleOpenReport} variant="outlined" sx={{ margin: '10px' }}>
+                <Button
+                  onClick={handleOpenReport}
+                  variant="outlined"
+                  sx={{ margin: "10px" }}
+                >
                   CREATE REPORT
                 </Button>
               </Box>
@@ -913,18 +933,18 @@ export default function DatabasePage({
                   headers={formHeaders}
                   onClose={() => {
                     handleClose();
-                    handleProcessingComplete();
+                    // handleProcessingComplete();
                   }}
                   setProcessedHeaders={setProcessedHeaders}
-                  setFormType={setFormType}
+                  setFormType={handleFormTypeChange}
                 />
               </Box>
             </Box>
           </Modal>
 
           <Modal
-            open={showInsertForm}
-            onClose={handleClose}
+            open={showDetailsForm}
+            onClose={handleDetailsClose}
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
           >
@@ -934,8 +954,9 @@ export default function DatabasePage({
                   startLoading={startLoading}
                   stopLoading={stopLoading}
                   onClose={() => {
-                    handleClose();
-                    handleProcessingComplete();
+                    // handleClose();
+                    // handleProcessingComplete();
+                    handleDetailsClose();
                   }}
                   setFormName={setFormName}
                   dbName={Database}
@@ -964,8 +985,8 @@ export default function DatabasePage({
             </Box>
           </Modal> */}
 
-           {/*Modal for reports*/}
-           <Modal
+          {/*Modal for reports*/}
+          <Modal
             open={reportOpen}
             onClose={handleReportClose}
             aria-labelledby="modal-modal-title"
@@ -979,7 +1000,7 @@ export default function DatabasePage({
                   headers={formHeaders}
                   onClose={handleReportClose}
                   databaseName={Database} // Pass the database name
-                  tableName={currentTbl}  // Pass the table name
+                  tableName={currentTbl} // Pass the table name
                   userID={userID} // Pass the User ID
                 />
               </Box>

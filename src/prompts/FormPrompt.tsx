@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
   Button,
   Box,
   Typography,
   Divider,
   CircularProgress,
+  IconButton,
 } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import { styled } from "@mui/system";
 import modalStyle from "../styles/ModalStyles";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +23,7 @@ type FormProps = {
   setProcessedHeaders: React.Dispatch<
     React.SetStateAction<ProcessedFormHeaders[] | undefined>
   >; // Correct type
-  setFormType: React.Dispatch<React.SetStateAction<string>>;
+  setFormType: (formType: string) => void;
 };
 
 interface ProcessedFormHeaders {
@@ -32,9 +32,25 @@ interface ProcessedFormHeaders {
 }
 
 const styles = {
-  dialogPaper: {
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  modalContent: {
     backgroundColor: "#DCF1EC",
     padding: "25px",
+    borderRadius: "10px",
+    position: "relative",
+    maxWidth: "500px",
+    width: "90%",
   },
   uploadButton: {
     marginTop: "10px",
@@ -67,6 +83,12 @@ const styles = {
     flexDirection: "column",
     color: "white",
   },
+  closeButton: {
+    position: "absolute",
+    color: "black",
+    top: "10px",
+    right: "10px",
+  },
 };
 
 const FormPrompt = ({
@@ -81,7 +103,6 @@ const FormPrompt = ({
   const userId = useSelector((state: RootState) => state.auth.userId);
   const [formHeaders, setFormHeaders] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
   useEffect(() => {
     setFormHeaders(headers);
     console.log("Headers received: ", headers);
@@ -95,10 +116,13 @@ const FormPrompt = ({
 
   const handleModify = () => {
     console.log("Modifying form");
+    processHeaders();
+    setFormType("Modify");
   };
 
   const handleDelete = () => {
     console.log("Deleting form");
+    setFormType("Delete");
   };
 
   const processHeaders = async () => {
@@ -112,7 +136,6 @@ const FormPrompt = ({
       console.log("API response:", response);
       console.log("Response data:", response.data);
 
-      // Assuming response.data is a string of comma-separated header values
       const headerString = response.data;
       const headerArray = headerString
         .split(",")
@@ -134,53 +157,65 @@ const FormPrompt = ({
     } finally {
       setIsProcessing(false);
       onClose();
+      // show modal
     }
   };
 
   return (
-    <Box sx={modalStyle}>
-      <div ref={drop} className="dropArea">
-        <div className="uploadTextContainer">
-          <Typography variant="h6">SELECT FORM TYPE</Typography>
-          <Divider sx={styles.divider} />
-          <Button
-            variant="contained"
-            color="primary"
-            component="label"
-            style={styles.uploadButton}
+    <div style={styles.modalOverlay as React.CSSProperties}>
+      <div style={styles.modalContent as React.CSSProperties}>
+        <Box sx={modalStyle}>
+          <IconButton
+            style={styles.closeButton as React.CSSProperties}
+            onClick={onClose}
+            aria-label="close"
           >
-            Insert
-            <input onClick={handleInsert} style={{ display: "none" }} />
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            component="label"
-            style={styles.uploadButton}
-          >
-            Modify
-            <input onClick={handleModify} style={{ display: "none" }} />
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            component="label"
-            style={styles.uploadButton}
-          >
-            Delete
-            <input onClick={handleDelete} style={{ display: "none" }} />
-          </Button>
-        </div>
+            <Close />
+          </IconButton>
+          <div ref={drop} className="dropArea">
+            <div className="uploadTextContainer">
+              <Typography variant="h6">SELECT FORM TYPE</Typography>
+              <Divider sx={styles.divider} />
+              <Button
+                variant="contained"
+                color="primary"
+                component="label"
+                style={styles.uploadButton}
+              >
+                Insert
+                <input onClick={handleInsert} style={{ display: "none" }} />
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                component="label"
+                style={styles.uploadButton}
+              >
+                Modify
+                <input onClick={handleModify} style={{ display: "none" }} />
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                component="label"
+                style={styles.uploadButton}
+              >
+                Delete
+                <input onClick={handleDelete} style={{ display: "none" }} />
+              </Button>
+            </div>
+          </div>
+          {isProcessing && (
+            <div style={styles.processingOverlay as React.CSSProperties}>
+              <CircularProgress color="inherit" />
+              <Typography variant="h6" style={{ marginTop: "20px" }}>
+                Processing Headers...
+              </Typography>
+            </div>
+          )}
+        </Box>
       </div>
-      {isProcessing && (
-        <div style={styles.processingOverlay as React.CSSProperties}>
-          <CircularProgress color="inherit" />
-          <Typography variant="h6" style={{ marginTop: "20px" }}>
-            Processing Headers...
-          </Typography>
-        </div>
-      )}
-    </Box>
+    </div>
   );
 };
 

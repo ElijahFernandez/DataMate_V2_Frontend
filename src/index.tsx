@@ -11,9 +11,10 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <Provider store={store}>
-    <React.StrictMode>
+    {/* <React.StrictMode> */} 
       <App />
-    </React.StrictMode>
+    {/* </React.StrictMode> */}
+    {/* samok kaayo sigeg rerender ug print sa console.log */}
   </Provider>
 );
 
