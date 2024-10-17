@@ -122,11 +122,15 @@ const FormDetailsPrompt = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultCustomSettings: CustomSettings = {
-    theme: "light",
+    theme: {
+      primary: "#ECDFCC", // Example primary color
+      light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
+    },
     form_title_align: "left",
     submit_button_width: "100",
     submit_button_align: "left",
     definition: "",
+    shrinkForm: "noShrink",
   };
 
   const handleSubmit = async () => {

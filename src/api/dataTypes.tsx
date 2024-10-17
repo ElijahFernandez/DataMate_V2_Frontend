@@ -72,10 +72,14 @@ export interface FormHeaders {
 }
 
 export type CustomSettings = {
-  theme: string;
+  theme: {
+    primary: string;
+    light: string;
+  };
   form_title_align: "center" | "left" | "right";
   submit_button_width: string;
   submit_button_align: "center" | "left" | "right";
   definition: string;
-  [key: string]: string | number; // to allow more custom settings dynamically
+  shrinkForm: "true" | "false" | "trueWithPlaceholder" | "noShrink";
+  [key: string]: string | number | object; // to allow more custom settings dynamically
 };

@@ -89,11 +89,15 @@ export default function FormEditPage({
   const settingsManagerRef = useRef(CustomSettingsManager);
 
   const [customSettings, setCustomSettings] = useState<CustomSettings>({
-    theme: "",
+    theme: {
+      primary: "#ECDFCC", // Example primary color
+      light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
+    },
     form_title_align: "left",
     submit_button_width: "",
     submit_button_align: "left",
     definition: "",
+    shrinkForm: "false",
   });
 
   // useEffect to fetch custom settings and is stored to customSettings
@@ -113,15 +117,32 @@ export default function FormEditPage({
   }, []);
   // useEffect to fetch form entity
   useEffect(() => {
-    const fetchFormEntityAndSettings = async () => {
+    const fetchFormEntity = async () => {
       if (formId) {
         startLoading();
         setIsLoading(true);
         try {
-          const formResponse = await axios.get(
+          const response = await axios.get(
             `http://localhost:8080/getForms/${formId}`
           );
-          setFormEntity(formResponse.data);
+          const fetchedFormEntity = response.data;
+
+          // Remove quotation marks from formName if they exist
+          if (fetchedFormEntity.formName) {
+            fetchedFormEntity.formName = fetchedFormEntity.formName.replace(
+              /^"|"$/g,
+              ""
+            );
+          }
+          // Parse and set custom settings
+          if (fetchedFormEntity.customSettings) {
+            const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
+            setCustomSettings((prevSettings) => ({
+              ...prevSettings,
+              ...parsedSettings,
+            }));
+          }
+          setFormEntity(fetchedFormEntity);
           // console.log("Fetched Form Entity:", formResponse.data);
         } catch (error) {
           console.error("Error fetching form entity or settings:", error);
@@ -132,7 +153,7 @@ export default function FormEditPage({
       }
     };
 
-    fetchFormEntityAndSettings();
+    fetchFormEntity();
   }, [formId, startLoading, stopLoading]);
 
   // useEffect to handle clicks outside of form
@@ -150,22 +171,31 @@ export default function FormEditPage({
   // }, []);
 
   const handleAddClick = () => {
-    setAddingDefinition(true); // Show the input field
-    setTempDefinition(definition); // Set the initial input value to the current definition
+    // setAddingDefinition(true); // Show the input field
+    // setTempDefinition(definition); // Set the initial input value to the current definition
+    setAddingDefinition(true);
+    setTempDefinition(customSettings.definition);
   };
 
   const handleCancelClick = () => {
     setAddingDefinition(false); // Revert to showing the plus icon and typography
   };
 
+  // const handleOkClick = () => {
+  //   setDefinition(tempDefinition); // Save the input as the new definition
+  //   setAddingDefinition(false); // Revert to showing the definition as typography
+  //   setCustomSettings({
+  //     // sets definition to customSettings for db to store
+  //     ...customSettings,
+  //     definition: tempDefinition,
+  //   });
+  // };
   const handleOkClick = () => {
-    setDefinition(tempDefinition); // Save the input as the new definition
-    setAddingDefinition(false); // Revert to showing the definition as typography
     setCustomSettings({
-      // sets definition to customSettings for db to store
       ...customSettings,
       definition: tempDefinition,
     });
+    setAddingDefinition(false);
   };
 
   const handleTextFieldClick = (event: React.MouseEvent, key: string) => {
@@ -190,16 +220,19 @@ export default function FormEditPage({
   const handleSave = async () => {
     console.log("Saving changes...");
     console.log("Will Save Custom Settings:", customSettings);
-  
+
     // Stringify the customSettings
     const stringifiedSettings = JSON.stringify(customSettings);
-  
+
     try {
-      await CustomSettingsManager.saveSettings(Number(formId), stringifiedSettings);
+      await CustomSettingsManager.saveSettings(
+        Number(formId),
+        stringifiedSettings
+      );
     } catch (error) {
       console.error("Failed to save settings:", error);
     }
-    navigate(`/forms/${formId}`);
+    navigate(`/forms/${formId}`, { state: { settingsSaved: true } });
     setOpenSaveModal(false);
   };
 
@@ -209,6 +242,15 @@ export default function FormEditPage({
   const handleCloseMenu = () => {
     setAnchorEl(null); // Close menu
   };
+
+  const updateFormName = useCallback((newName: string) => {
+    setFormEntity((prevEntity) => {
+      if (prevEntity) {
+        return { ...prevEntity, formName: newName };
+      }
+      return prevEntity;
+    });
+  }, []);
 
   if (isLoading) {
     return <CircularProgress />;
@@ -228,250 +270,290 @@ export default function FormEditPage({
   const headers = JSON.parse(formEntity.headers);
 
   return (
-    <Box sx={{ maxWidth: 600, margin: "auto", mt: 15 }} ref={formRef}>
-      <Paper
-        onClick={(e) => handleFieldClick("form field", "form", e)}
-        elevation={3}
-        sx={{
-          p: 3,
-          position: "relative",
-          cursor: "pointer",
-          "&:hover": {
-            backgroundColor: "whitesmoke",
-            transition: "background-color 0.5s ease", // Smooth transition effect
-          },
-        }}
-      >
-        <Box
-          onClick={(e) => {
-            e.stopPropagation();
-            handleFieldClick(formEntity.formName, "form title");
-          }}
+    <Box
+      sx={{
+        backgroundColor: customSettings.theme.light,
+        minHeight: "98vh",
+      }}
+    >
+      <Box sx={{ maxWidth: 600, margin: "auto", pt: 30 }} ref={formRef}>
+        <Paper
+          onClick={(e) => handleFieldClick("form field", "form", e)}
+          elevation={3}
           sx={{
+            p: 3,
+            position: "relative",
             cursor: "pointer",
             "&:hover": {
-              backgroundColor: "lightgray",
+              backgroundColor: "whitesmoke",
+              transition: "background-color 0.5s ease", // Smooth transition effect
             },
           }}
         >
-          <Typography
-            variant="h4"
-            gutterBottom
-            align={customSettings.form_title_align} // set form title dynamically
-          >
-            {formEntity.formName}
-          </Typography>
-        </Box>
-
-        {/* Conditionally render the definition input or the plus icon */}
-        {!addingDefinition ? (
-          <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
-            <IconButton onClick={handleAddClick}>
-              <PlusIcon />
-            </IconButton>
-            <Typography variant="body1" sx={{ ml: 1 }}>
-              {definition ? definition : "add a small definition for the form"}
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", mb: 1.5 }}>
-            <TextField
-              fullWidth
-              label="Form Definition"
-              value={tempDefinition}
-              onChange={(e) => setTempDefinition(e.target.value)}
-              margin="normal"
-            />
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-              <Button variant="outlined" onClick={handleCancelClick}>
-                Cancel
-              </Button>
-              <Button variant="contained" onClick={handleOkClick}>
-                OK
-              </Button>
-            </Box>
-          </Box>
-        )}
-
-        {Object.entries(headers).map(([key, value]) => (
           <Box
-            key={key}
-            // onMouseEnter={(e) => e.stopPropagation()} // Prevent hover propagation from TextField
-            // onClick={() => handleFieldClick(key, "textfield")}
-            onClick={(e) => e.stopPropagation()}
-            onMouseEnter={(e) => e.stopPropagation()} // Stop hover propagation
-            onMouseLeave={(e) => e.stopPropagation()} // Stop hover propagation
+            onClick={(e) => {
+              e.stopPropagation();
+              handleFieldClick(formEntity.formName, "form title");
+            }}
             sx={{
-              position: "relative",
+              cursor: "pointer",
               "&:hover": {
-                backgroundColor: "rgba(0, 0, 0, 0.05)", // Your hover color
-                paddingLeft: 2, // Extend left side
-                paddingRight: 2, // Extend right side
-                marginLeft: "-16px", // Adjust margin for left overlap
-                marginRight: "-16px", // Adjust margin for right overlap
-                borderRadius: "8px", // To have rounded corners
-                transition: "background-color 0.3s ease", // Smooth transition effect
+                backgroundColor: "lightgray",
               },
             }}
           >
-            <TextField
-              onClick={(e) => handleTextFieldClick(e, key)}
+            <Typography
+              variant="h4"
+              gutterBottom
+              align={customSettings.form_title_align} // set form title dynamically
+            >
+              {formEntity.formName}
+            </Typography>
+          </Box>
+
+          {/* Conditionally render the definition input or the plus icon */}
+          {!addingDefinition ? (
+            <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
+              <IconButton onClick={handleAddClick}>
+                <PlusIcon />
+              </IconButton>
+              <Typography variant="body1" sx={{ ml: 1 }}>
+                {customSettings.definition ||
+                  "add a small definition for the form"}
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", mb: 1.5 }}>
+              <TextField
+                fullWidth
+                label="Form Definition"
+                value={tempDefinition}
+                onChange={(e) => setTempDefinition(e.target.value)}
+                margin="normal"
+              />
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                <Button variant="outlined" onClick={handleCancelClick}>
+                  Cancel
+                </Button>
+                <Button variant="contained" onClick={handleOkClick}>
+                  OK
+                </Button>
+              </Box>
+            </Box>
+          )}
+
+          {Object.entries(headers).map(([key, value]) => (
+            <Box
               key={key}
-              fullWidth
-              margin="normal"
-              name={key}
-              label={formatLabel(key as string)}
-              value={formData[key] || ""}
-              // onChange={handleInputChange}
-              // disabled
-              type={value as string}
-              // Here you can set the input styles dynamically for the form builder
-              InputProps={{
-                sx: {
-                  backgroundColor: "background.paper", // Keeps the original background color
-                  opacity: 1, // Ensures the text field is fully opaque
-                  "& .MuiInputBase-input": {
-                    WebkitTextFillColor: "inherit", // Keeps text color
-                    // Add any other styles you want to maintain the appearance
-                  },
+              // onMouseEnter={(e) => e.stopPropagation()} // Prevent hover propagation from TextField
+              // onClick={() => handleFieldClick(key, "textfield")}
+              onClick={(e) => e.stopPropagation()}
+              onMouseEnter={(e) => e.stopPropagation()} // Stop hover propagation
+              onMouseLeave={(e) => e.stopPropagation()} // Stop hover propagation
+              sx={{
+                position: "relative",
+                "&:hover": {
+                  backgroundColor: "rgba(0, 0, 0, 0.05)", // Your hover color
+                  paddingLeft: 2, // Extend left side
+                  paddingRight: 2, // Extend right side
+                  marginLeft: "-16px", // Adjust margin for left overlap
+                  marginRight: "-16px", // Adjust margin for right overlap
+                  borderRadius: "8px", // To have rounded corners
+                  transition: "background-color 0.3s ease", // Smooth transition effect
                 },
               }}
-            />
-          </Box>
-        ))}
-        <Box
-          sx={{
-            display: "flex",
-            // set button alignment dynamically
-            justifyContent:
-              customSettings.submit_button_align === "left"
-                ? "flex-start"
-                : customSettings.submit_button_align === "right"
-                ? "flex-end"
-                : customSettings.submit_button_align === "center"
-                ? "center"
-                : "flex-start",
-            mt: 2,
-          }}
-        >
-          <Button
-            // onClick={handleSubmit}
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent the event from bubbling
-              handleFieldClick("submit", "button"); // Handle field click when TextField is clicked
-            }}
-            type="submit"
-            variant="contained"
-            color="primary"
-            sx={{ width: customSettings.submit_button_width }} // Set width dynamically
-          >
-            Submit
-          </Button>
-        </Box>
-      </Paper>
-
-      {/* ------------------------------------------------------------ */}
-      {/* Modals, extensions, etc. */}
-      <Modal
-        open={openModal}
-        onClose={() => setOpenModal(false)} // Close the modal on backdrop click
-      >
-        <Box sx={modalStyle}>
-          <Typography variant="h6" gutterBottom>
-            Are you sure you want to delete this form?
-          </Typography>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={async () => {
-                try {
-                  const response = await axios.delete(
-                    `http://localhost:8080/deleteForm`,
-                    { params: { formId: formEntity?.formId } }
-                  );
-                  console.log(response.data); // Optionally log the success message
-                  setOpenModal(false); // Close modal after deletion
-                  navigate("/forms"); // Redirect to the /forms path
-                } catch (error) {
-                  console.error("Error deleting form:", error);
-                  // You can handle the error (e.g., show a notification)
+            >
+              <TextField
+                onClick={(e) => handleTextFieldClick(e, key)}
+                key={key}
+                fullWidth
+                margin="normal"
+                name={key}
+                placeholder={
+                  customSettings.shrinkForm === "trueWithPlaceholder"
+                    ? `Enter ${formatLabel(key as string)}`
+                    : ""
                 }
-              }}
-              sx={{ mr: 2 }}
-            >
-              Yes
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => setOpenModal(false)} // Close modal without deleting
-            >
-              No
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
-      {/* Sidebar for editing */}
-      <Sidebar
-        selectedField={selectedField}
-        selectedFieldType={selectedFieldType}
-        customSettings={customSettings}
-        setCustomSettings={setCustomSettings}
-      />
-      {/* Edit Icon */}
-      <Box
-        // onClick={handleEditClick}
-        sx={{
-          position: "absolute",
-          bottom: 50,
-          right: 50,
-          bgcolor: "primary.main", // Background color (you can adjust this)
-          borderRadius: "50%", // Circle shape
-          p: 1, // Padding to create spacing around the icon
-          cursor: "pointer", // Change cursor to pointer on hover
-        }}
-      >
-        <Tooltip title="Save" placement="top" arrow>
-          <IconButton
-            onClick={() => setOpenSaveModal(true)}
+                label={formatLabel(key as string)}
+                value={formData[key] || ""}
+                // onChange={handleInputChange}
+                // disabled
+                type={value as string}
+                InputProps={{
+                  sx: {
+                    backgroundColor: "background.paper", // Keeps the original background color
+                    opacity: 1, // Ensures the text field is fully opaque
+                    "& .MuiInputBase-input": {
+                      WebkitTextFillColor: "inherit", // Keeps text color
+                      // Add any other styles you want to maintain the appearance
+                    },
+                  },
+                }}
+                InputLabelProps={{
+                  shrink:
+                    value === "date"
+                      ? true
+                      : customSettings.shrinkForm === "true"
+                      ? true
+                      : customSettings.shrinkForm === "false"
+                      ? false
+                      : customSettings.shrinkForm === "trueWithPlaceholder"
+                      ? true
+                      : customSettings.shrinkForm === "noShrink"
+                      ? undefined
+                      : undefined,
+                }}
+              />
+            </Box>
+          ))}
+          <Box
             sx={{
-              color: "white", // Icon color
+              display: "flex",
+              // set button alignment dynamically
+              justifyContent:
+                customSettings.submit_button_align === "left"
+                  ? "flex-start"
+                  : customSettings.submit_button_align === "right"
+                  ? "flex-end"
+                  : customSettings.submit_button_align === "center"
+                  ? "center"
+                  : "flex-start",
+              mt: 2,
             }}
           >
-            <SaveIcon sx={{ fontSize: 30 }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
-      {/* Save Changes Modal */}
-      <Modal open={openSaveModal} onClose={() => setOpenSaveModal(false)}>
-        <Box sx={modalStyle}>
-          <Typography variant="h6" gutterBottom>
-            Do you want to save changes?
-          </Typography>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
             <Button
+              // onClick={handleSubmit}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent the event from bubbling
+                handleFieldClick("submit", "button"); // Handle field click when TextField is clicked
+              }}
+              type="submit"
               variant="contained"
               color="primary"
-              onClick={handleSave}
-              sx={{ mr: 2 }}
+              sx={{
+                width: customSettings.submit_button_width,
+                backgroundColor: customSettings.theme.primary,
+                "&:hover": {
+                  backgroundColor: customSettings.theme.primary, // Primary color on hover
+                  color: "#fff", // White text color on hover
+                },
+                transition: "background-color 0.3s, color 0.3s", // Smooth transition effect
+              }}
             >
-              Yes
-            </Button>
-            <Button variant="outlined" onClick={() => setOpenSaveModal(false)}>
-              No
+              Submit
             </Button>
           </Box>
+        </Paper>
+
+        {/* ------------------------------------------------------------ */}
+        {/* Modals, extensions, etc. */}
+        <Modal
+          open={openModal}
+          onClose={() => setOpenModal(false)} // Close the modal on backdrop click
+        >
+          <Box sx={modalStyle}>
+            <Typography variant="h6" gutterBottom>
+              Are you sure you want to delete this form?
+            </Typography>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={async () => {
+                  try {
+                    const response = await axios.delete(
+                      `http://localhost:8080/deleteForm`,
+                      { params: { formId: formEntity?.formId } }
+                    );
+                    console.log(response.data); // Optionally log the success message
+                    setOpenModal(false); // Close modal after deletion
+                    navigate("/forms"); // Redirect to the /forms path
+                  } catch (error) {
+                    console.error("Error deleting form:", error);
+                    // You can handle the error (e.g., show a notification)
+                  }
+                }}
+                sx={{ mr: 2 }}
+              >
+                Yes
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setOpenModal(false)} // Close modal without deleting
+              >
+                No
+              </Button>
+            </Box>
+          </Box>
+        </Modal>
+        {/* Sidebar for editing */}
+        <Sidebar
+          selectedField={selectedField}
+          selectedFieldType={selectedFieldType}
+          customSettings={customSettings}
+          startLoading={startLoading}
+          stopLoading={stopLoading}
+          setCustomSettings={setCustomSettings}
+          updateFormName={updateFormName} // Add this new prop
+        />
+        {/* Edit Icon */}
+        <Box
+          // onClick={handleEditClick}
+          sx={{
+            position: "absolute",
+            bottom: 50,
+            right: 50,
+            bgcolor: "primary.main", // Background color (you can adjust this)
+            borderRadius: "50%", // Circle shape
+            p: 1, // Padding to create spacing around the icon
+            cursor: "pointer", // Change cursor to pointer on hover
+          }}
+        >
+          <Tooltip title="Save" placement="top" arrow>
+            <IconButton
+              onClick={() => setOpenSaveModal(true)}
+              sx={{
+                color: "white", // Icon color
+              }}
+            >
+              <SaveIcon sx={{ fontSize: 30 }} />
+            </IconButton>
+          </Tooltip>
         </Box>
-      </Modal>
-      <IconButton
-        onClick={() => console.log(customSettings)}
-        sx={{
-          color: "black", // Icon color
-          ml: 2, // Margin left to separate from the save icon
-        }}
-      >
-        <PlusIcon sx={{ fontSize: 30 }} />
-      </IconButton>
+        {/* Save Changes Modal */}
+        <Modal open={openSaveModal} onClose={() => setOpenSaveModal(false)}>
+          <Box sx={modalStyle}>
+            <Typography variant="h6" gutterBottom>
+              Do you want to save changes?
+            </Typography>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSave}
+                sx={{ mr: 2 }}
+              >
+                Yes
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setOpenSaveModal(false)}
+              >
+                No
+              </Button>
+            </Box>
+          </Box>
+        </Modal>
+        <IconButton
+          onClick={() => console.log(customSettings)}
+          sx={{
+            color: "black", // Icon color
+            ml: 2, // Margin left to separate from the save icon
+          }}
+        >
+          <PlusIcon sx={{ fontSize: 30 }} />
+        </IconButton>
+      </Box>
     </Box>
   );
 }

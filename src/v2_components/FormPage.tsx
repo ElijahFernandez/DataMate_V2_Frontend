@@ -71,12 +71,16 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
 
   const settingsManagerRef = useRef(CustomSettingsManager);
   const [customSettings, setCustomSettings] = useState<CustomSettings>({
-    theme: "",
+    theme: {
+      primary: "#ECDFCC", // Example primary color
+      light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
+    },
     form_title_fontsize: "",
     form_title_align: "left",
     submit_button_width: "",
     submit_button_align: "left",
     definition: "",
+    shrinkForm: "false",
   });
 
   useEffect(() => {
@@ -107,6 +111,21 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           initializeFormData(response.data.headers); // Initialize form data here
           console.log("Fetched Form Entity:", response.data);
           console.log("Fetched Form Table name:", response.data.tblName);
+          const fetchedFormEntity = response.data;
+          if (fetchedFormEntity.formName) {
+            fetchedFormEntity.formName = fetchedFormEntity.formName.replace(
+              /^"|"$/g,
+              ""
+            );
+          }
+          // Parse and set custom settings
+          if (fetchedFormEntity.customSettings) {
+            const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
+            setCustomSettings((prevSettings) => ({
+              ...prevSettings,
+              ...parsedSettings,
+            }));
+          }
         } catch (error) {
           console.error("Error fetching form entity:", error);
         } finally {
@@ -118,6 +137,15 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
 
     fetchFormEntity();
   }, [formId, startLoading, stopLoading]);
+
+  useEffect(() => {
+    // Check if settings were just saved
+    if (loc.state?.settingsSaved) {
+      toast.success("Form Settings saved!");
+      // Clear the state so the toast doesn't show again on refresh
+      navigate(loc.pathname, { replace: true, state: {} });
+    }
+  }, [loc, navigate]);
 
   const initializeFormData = (headersString: string) => {
     const headers = JSON.parse(headersString);
@@ -213,26 +241,117 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const headers = JSON.parse(formEntity.headers);
 
   return (
-    <Box sx={{ maxWidth: 600, margin: "auto", mt: 15 }}>
-      <Toaster />
-      <IconButton
+    <Box
+      sx={{
+        backgroundColor: customSettings.theme.light,
+        minHeight: "98vh",
+        display: "flex",
+        flexDirection: "column,",
+      }}
+    >
+      <Box sx={{ maxWidth: 600, margin: "auto" }}>
+        {/* <IconButton
         sx={{ position: "absolute", top: 80, right: 20 }}
         onClick={handleOnClickIcon}
       >
         <MoreVertIcon />
-      </IconButton>
-
-      <Menu anchorEl={anchorEl} open={open} onClose={handleCloseMenu}>
-        <MenuItem
-          onClick={() => {
-            setOpenModal(true);
-            handleCloseMenu();
+      </IconButton> */}
+        <Menu anchorEl={anchorEl} open={open} onClose={handleCloseMenu}>
+          <MenuItem
+            onClick={() => {
+              setOpenModal(true);
+              handleCloseMenu();
+            }}
+          >
+            Delete
+          </MenuItem>
+        </Menu>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 3,
+            // position: "relative",
+            // backgroundColor: "white",
           }}
         >
-          Delete
-        </MenuItem>
-      </Menu>
-      <Paper elevation={3} sx={{ p: 3, position: "relative" }}>
+          <Toaster position="top-center" reverseOrder={false} />
+
+          <Typography
+            variant="h4"
+            gutterBottom
+            align={customSettings.form_title_align} // set form title dynamically
+          >
+            {formEntity.formName}
+          </Typography>
+          <Typography variant="body1" gutterBottom>
+            {customSettings.definition}
+          </Typography>
+          <form onSubmit={handleSubmit}>
+            {Object.entries(headers).map(([key, value]) => (
+              <TextField
+                key={key}
+                fullWidth
+                margin="normal"
+                name={key}
+                placeholder={
+                  customSettings.shrinkForm === "trueWithPlaceholder"
+                    ? `Enter ${formatLabel(key as string)}`
+                    : ""
+                }
+                label={formatLabel(key as string)}
+                value={formData[key] || ""}
+                onChange={handleInputChange}
+                type={value as string}
+                InputLabelProps={{
+                  shrink:
+                    value === "date"
+                      ? true
+                      : customSettings.shrinkForm === "true"
+                      ? true
+                      : customSettings.shrinkForm === "false"
+                      ? false
+                      : customSettings.shrinkForm === "trueWithPlaceholder"
+                      ? true
+                      : customSettings.shrinkForm === "noShrink"
+                      ? undefined
+                      : undefined,
+                }}
+              />
+            ))}
+            <Box
+              sx={{
+                display: "flex",
+                // set button alignment dynamically
+                justifyContent:
+                  customSettings.submit_button_align === "left"
+                    ? "flex-start"
+                    : customSettings.submit_button_align === "right"
+                    ? "flex-end"
+                    : customSettings.submit_button_align === "center"
+                    ? "center"
+                    : "flex-start",
+                mt: 2,
+              }}
+            >
+              <Button
+                onClick={handleSubmit}
+                type="submit"
+                variant="contained"
+                sx={{
+                  width: customSettings.submit_button_width,
+                  backgroundColor: customSettings.theme.primary,
+                  "&:hover": {
+                    backgroundColor: customSettings.theme.primary, // Primary color on hover
+                    color: "#fff", // White text color on hover
+                  },
+                  transition: "background-color 0.3s, color 0.3s", // Smooth transition effect
+                }}
+              >
+                Submit
+              </Button>
+            </Box>
+          </form> 
+        </Paper>
         <Popover
           open={openEdit}
           anchorEl={anchorElEdit}
@@ -244,7 +363,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           transformOrigin={{
             vertical: "bottom",
             horizontal: "left",
-          }}
+          }}  
           sx={{
             ".MuiPaper-root": {
               borderRadius: "20px",
@@ -268,106 +387,56 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             </Button>
           </Box>
         </Popover>
-        <Typography
-          variant="h4"
-          gutterBottom
-          align={customSettings.form_title_align} // set form title dynamically
+        <Box
+          onClick={handleEditClick}
+          sx={{
+            position: "absolute",
+            bottom: 50,
+            right: 50,
+            bgcolor: "primary.main",
+            borderRadius: "50%",
+            p: 1,
+            cursor: "pointer",
+          }}
         >
-          {formEntity.formName}
-        </Typography>
-        <Typography variant="body1" gutterBottom>
-          {customSettings.definition}
-        </Typography>
-        <form onSubmit={handleSubmit}>
-          {Object.entries(headers).map(([key, value]) => (
-            <TextField
-              key={key}
-              fullWidth
-              margin="normal"
-              name={key}
-              label={formatLabel(key as string)}
-              value={formData[key] || ""}
-              onChange={handleInputChange}
-              type={value as string}
-            />
-          ))}
-          <Box
-            sx={{
-              display: "flex",
-              // set button alignment dynamically
-              justifyContent:
-                customSettings.submit_button_align === "left"
-                  ? "flex-start"
-                  : customSettings.submit_button_align === "right"
-                  ? "flex-end"
-                  : customSettings.submit_button_align === "center"
-                  ? "center"
-                  : "flex-start",
-              mt: 2,
-            }}
-          >
-            <Button
-              onClick={handleSubmit}
-              type="submit"
-              variant="contained"
-              color="primary"
-              sx={{ width: customSettings.submit_button_width }} // Set width dynamically
-            >
-              Submit
-            </Button>
-          </Box>
-        </form>
-      </Paper>
-
-      <Box
-        onClick={handleEditClick}
-        sx={{
-          position: "absolute",
-          bottom: 50,
-          right: 50,
-          bgcolor: "primary.main",
-          borderRadius: "50%",
-          p: 1,
-          cursor: "pointer",
-        }}
-      >
-        <IconButton sx={{ color: "white" }}>
-          <EditIcon sx={{ fontSize: 30 }} />
-        </IconButton>
-      </Box>
-
-      <Modal open={openModal} onClose={() => setOpenModal(false)}>
-        <Box sx={modalStyle}>
-          <Typography variant="h6" gutterBottom>
-            Are you sure you want to delete this form?
-          </Typography>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={async () => {
-                try {
-                  const response = await axios.delete(
-                    `http://localhost:8080/deleteForm`,
-                    { params: { formId: formEntity?.formId } }
-                  );
-                  console.log(response.data);
-                  setOpenModal(false);
-                  navigate("/forms");
-                } catch (error) {
-                  console.error("Error deleting form:", error);
-                }
-              }}
-              sx={{ mr: 2 }}
-            >
-              Yes
-            </Button>
-            <Button variant="outlined" onClick={() => setOpenModal(false)}>
-              No
-            </Button>
-          </Box>
+          <IconButton sx={{ color: "white" }}>
+            <EditIcon sx={{ fontSize: 30 }} />
+          </IconButton>
         </Box>
-      </Modal>
+
+        <Modal open={openModal} onClose={() => setOpenModal(false)}>
+          <Box sx={modalStyle}>
+            <Typography variant="h6" gutterBottom>
+              Are you sure you want to delete this form?
+            </Typography>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={async () => {
+                  try {
+                    const response = await axios.delete(
+                      `http://localhost:8080/deleteForm`,
+                      { params: { formId: formEntity?.formId } }
+                    );
+                    console.log(response.data);
+                    setOpenModal(false);
+                    navigate("/forms");
+                  } catch (error) {
+                    console.error("Error deleting form:", error);
+                  }
+                }}
+                sx={{ mr: 2 }}
+              >
+                Yes
+              </Button>
+              <Button variant="outlined" onClick={() => setOpenModal(false)}>
+                No
+              </Button>
+            </Box>
+          </Box>
+        </Modal>
+      </Box>
     </Box>
   );
 }
