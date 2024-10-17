@@ -46,6 +46,8 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
   const handleRenameModalOpen = () => setRenameModalOpen(true);
   const handleRenameModalClose = () => setRenameModalOpen(false);
 
+  const aggregateRow: { [key: string]: number | string } = {};
+
   const [newName, setNewName] = useState("");
 
   const handleRenameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,17 +111,17 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
    // Fetch the report entity once, and update the reportId and reportName
    useEffect(() => {
     const fetchReportEntity = async () => {
-    //   startLoading();
+      console.log("Report ID upon fetching", rprtId);
       const entity = await getReportEntity(rprtId);
       if (entity) {
         setReportName(entity.reportName);
         setReportId(entity.reportId); // Update reportId here
         console.log("Fetched Report Entity:", entity);
       }
-    //   stopLoading();
     };
     fetchReportEntity();
   }, [rprtId]);
+  
 
 //   // Fetch the report data only when reportId is set and not null
 //   useEffect(() => {
@@ -128,34 +130,94 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
 //     }
 //   }, [reportId]);  // Trigger only when reportId is updated
 
+// useEffect(() => {
+//     // Fetching report data
+//     async function fetchReportData() {
+//       try {
+//         const response = await axios.get(`http://localhost:8080/executeReportQueryById/${reportId}`);
+//         const reportData = response.data; // Assume this is the structure you get
+//         console.log("Fetched Report Data:", reportData);
+  
+//         // Set the columns based on the keys of the first report object
+//         if (reportData.length > 0) {
+//           const firstRow = reportData[0];
+//           const newColsData = Object.keys(firstRow).map((key) => ({
+//             name: key,
+//             header: key.charAt(0).toUpperCase() + key.slice(1), // Capitalize header
+//             defaultFlex: 1, // Or set a specific flex value
+//           }));
+//           setColsData(newColsData);
+//         }
+  
+//         // Set report data after defining columns
+//         setReportData(reportData);
+//       } catch (error) {
+//         console.error("Error fetching report data:", error);
+//       }
+//     }
+  
+//     fetchReportData();
+//   }, [reportId]); // Add any dependencies you need here
 useEffect(() => {
-    // Fetching report data
+  if (reportId) {
     async function fetchReportData() {
       try {
         const response = await axios.get(`http://localhost:8080/executeReportQueryById/${reportId}`);
-        const reportData = response.data; // Assume this is the structure you get
+        const reportData: Array<{ [key: string]: any }> = response.data;
         console.log("Fetched Report Data:", reportData);
-  
-        // Set the columns based on the keys of the first report object
+
         if (reportData.length > 0) {
           const firstRow = reportData[0];
+
+          // Define columns based on the keys of the first report object
           const newColsData = Object.keys(firstRow).map((key) => ({
             name: key,
             header: key.charAt(0).toUpperCase() + key.slice(1), // Capitalize header
-            defaultFlex: 1, // Or set a specific flex value
+            defaultFlex: 1,
           }));
           setColsData(newColsData);
+
+          // Check if any columns are for totals or averages
+          const aggregateRow: { [key: string]: number | string } = {}; // Define the aggregateRow type
+          let hasAggregates = false;
+
+          // Loop through the keys to find if any aggregate data exists
+          Object.keys(firstRow).forEach((key) => {
+            if (key.toLowerCase().includes("total") || key.toLowerCase().includes("amount") || key.toLowerCase().includes("salary")) {
+              hasAggregates = true;
+              aggregateRow[key] = reportData.reduce((sum: number, row: { [key: string]: any }) => {
+                return sum + (parseFloat(row[key]) || 0); // Convert string to number for aggregation
+              }, 0);
+            }
+          });
+
+          // Regardless of the title column, the aggregate row should have the title 'Total'
+          Object.keys(firstRow).forEach((key) => {
+            if (!aggregateRow[key]) {
+              aggregateRow[key] = key === 'titleColumn' ? "Total" : ''; // Set "Total" to the title column, blank for others
+            }
+          });
+
+          // If there are aggregates, append the aggregate row
+          if (hasAggregates) {
+            aggregateRow[Object.keys(firstRow)[0]] = "Total"; // First column is often the title
+            reportData.push(aggregateRow); // Append the aggregate row
+          }
+
+          setReportData(reportData); // Set the data with or without aggregates
         }
-  
-        // Set report data after defining columns
-        setReportData(reportData);
       } catch (error) {
         console.error("Error fetching report data:", error);
       }
     }
-  
+
     fetchReportData();
-  }, [reportId]); // Add any dependencies you need here
+  }
+}, [reportId]);
+
+
+
+
   
 
   return (
