@@ -11,6 +11,7 @@ import {
   MenuItem,
   Select,
   SelectChangeEvent,
+  Grid,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
@@ -50,7 +51,9 @@ export default function Sidebar({
   const { formId } = useParams<{ formId: string }>();
   const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [buttonWidth, setButtonWidth] = useState<string>("100");
+  const [buttonWidth, setButtonWidth] = useState<"small" | "medium" | "fullWidth">(
+    "small"
+  );
   const [buttonAlign, setButtonAlign] = useState<"center" | "left" | "right">(
     "left"
   );
@@ -60,14 +63,12 @@ export default function Sidebar({
   >("noShrink");
 
   const [formTitleAlign, setFormTitleAlign] = useState<
-  "center" | "left" | "right"
->("left");
+    "center" | "left" | "right"
+  >("left");
 
   const [formName, setFormName] = useState(
     formEntity ? formEntity.formName : ""
-  ); 
-
-  const [newFormName, setNewFormName] = useState<string>();
+  );
 
   const handleFormTitleChange = async (formId: number, newFormName: string) => {
     try {
@@ -78,7 +79,7 @@ export default function Sidebar({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(newFormName),
+          body: newFormName,
         }
       );
 
@@ -106,6 +107,16 @@ export default function Sidebar({
     } else {
       console.error("Form ID not found");
     }
+  };
+
+  const handleThemeSelection = (primary: string, light: string) => {
+    setCustomSettings({
+      ...customSettings,
+      theme: {
+        primary: primary,
+        light: light,
+      },
+    });
   };
 
   useEffect(() => {
@@ -216,12 +227,32 @@ export default function Sidebar({
 
   const renderButtonSettings = () => (
     <>
-      <Typography variant="subtitle1" gutterBottom>
-        Submit Button Settings
-      </Typography>
-      <TextField label="Button Width" fullWidth margin="normal" />
+      <div style={{ textAlign: "center", marginTop: 30 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Submit Button Settings
+        </Typography>
+      </div>
+      <Divider sx={{ my: 1 }} />
       <FormControl fullWidth margin="normal">
-        <InputLabel>Button Alignment</InputLabel>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+          Button Size
+        </Typography>
+      <Select
+          value={buttonWidth}
+          onChange={(event: SelectChangeEvent<string>) =>
+            setButtonWidth(event.target.value as "small" | "medium" | "fullWidth")
+          }
+        >
+          <MenuItem value="small">Small</MenuItem>
+          <MenuItem value="medium">Medium</MenuItem>
+          <MenuItem value="fullWidth">Full Width</MenuItem>
+        </Select>
+
+        <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
+          Button Alignment
+        </Typography>
+        
+        {/* <InputLabel>Button Alignment</InputLabel> */}
         <Select
           value={buttonAlign}
           onChange={(event: SelectChangeEvent<string>) =>
@@ -239,6 +270,7 @@ export default function Sidebar({
           onClick={() =>
             setCustomSettings({
               ...customSettings,
+              submit_button_width: buttonWidth,
               submit_button_align: buttonAlign,
             })
           }
@@ -283,6 +315,90 @@ export default function Sidebar({
           Apply
         </Button>
       </FormControl>
+
+      <Typography variant="body2" sx={{ mt: 3, mb: 1 }}>
+        Choose Theme
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={4}>
+          <Box
+            sx={{
+              backgroundColor: "#ECDFCC",
+              height: 50,
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleThemeSelection("#ECDFCC", "rgba(252, 250, 238, 0.6)")
+            }
+          />
+        </Grid>
+        <Grid item xs={4}>
+          <Box
+            sx={{
+              backgroundColor: "#08C2FF",
+              height: 50,
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleThemeSelection("#08C2FF", "rgba(8, 194, 255, 0.3)")
+            }
+          />
+        </Grid>
+        <Grid item xs={4}>
+          <Box
+            sx={{
+              backgroundColor: "#1AA2A5",
+              height: 50,
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleThemeSelection("#1AA2A5", "rgba(26, 162, 165, 0.3)")
+            }
+          />
+        </Grid>
+        <Grid item xs={4}>
+          <Box
+            sx={{
+              backgroundColor: "#EF5A6F",
+              height: 50,
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleThemeSelection("#EF5A6F", "rgba(239, 90, 111, 0.3)")
+            }
+          />
+        </Grid>
+        <Grid item xs={4}>
+          <Box
+            sx={{
+              backgroundColor: "#6FCF66",
+              height: 50,
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleThemeSelection("#6FCF66", "rgba(111, 207, 102, 0.3)")
+            }
+          />
+        </Grid>
+        <Grid item xs={4}>
+          <Box
+            sx={{
+              backgroundColor: "#8967B3",
+              height: 50,
+              borderRadius: 2,
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleThemeSelection("#8967B3", "rgba(137, 103, 179, 0.3)")
+            }
+          />
+        </Grid>
+      </Grid>
     </>
   );
 
@@ -303,18 +419,17 @@ export default function Sidebar({
         <Typography variant="h6" gutterBottom sx={{ paddingTop: 8 }}>
           Edit Styles
         </Typography>
-      
 
-      {!selectedField && (
-        <Typography variant="body1" gutterBottom>
-          Select a field to edit
-        </Typography>
-      )}
-      {selectedField && (
-        <Typography variant="body1" gutterBottom>
-          Editing: {selectedField}
-        </Typography>
-      )}
+        {!selectedField && (
+          <Typography variant="body1" gutterBottom>
+            Select a field to edit
+          </Typography>
+        )}
+        {selectedField && (
+          <Typography variant="body1" gutterBottom>
+            Editing: {selectedField}
+          </Typography>
+        )}
       </div>
 
       {selectedFieldType === "form title" && renderFormTitleSettings()}

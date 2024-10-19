@@ -13,7 +13,6 @@ import {
   Menu,
   Modal,
   Typography,
-
 } from "@mui/material";
 import Popover from "@mui/material/Popover";
 import List from "@mui/material/List";
@@ -648,7 +647,23 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                         </div>
                       </div> */}
                       <div style={{ flex: "1" }}>
-                        {handleClickFormName(form)}
+                        {/* Display form name */}
+                        <div
+                          onClick={() => handleClickFormName(form)}
+                          // style={{ fontWeight: "bold" }}
+                        >
+                          {form.formName}
+                        </div>
+                        {/* Display form type below the form name */}
+                        <div
+                          style={{
+                            color: "#555",
+                            fontSize: "0.9em",
+                            marginTop: "4px",
+                          }}
+                        >
+                          {form.formType || "null"}
+                        </div>
                       </div>
 
                       {/* Triple dot Icon Horizontal from each Form Instance */}
@@ -807,7 +822,7 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                               );
                               console.log(response.data); // Optionally log the success message
                               setOpenModal(false); // Close modal after deletion
-                                window.location.reload(); // Refresh the page
+                              window.location.reload(); // Refresh the page
                             } catch (error) {
                               console.error("Error deleting form:", error);
                               // You can handle the error (e.g., show a notification)

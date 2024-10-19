@@ -25,38 +25,6 @@ class CustomSettingsManager {
     }
   }
 
-  // // Update an existing setting
-  // updateSetting(key: keyof CustomSettings, value: string | number): void {
-  //   if (this.settings[key] !== undefined) {
-  //     this.settings[key] = value;
-  //     console.log(`Updated setting: ${key} = ${value}`);
-  //   } else {
-  //     console.log(`Setting '${key}' does not exist.`);
-  //   }
-  // }
-
-  // // Insert a new setting
-  // insertSetting(key: string, value: string | number): void {
-  //   if (this.settings[key] === undefined) {
-  //     this.settings[key] = value;
-  //     console.log(`Inserted new setting: ${key} = ${value}`);
-  //   } else {
-  //     console.log(
-  //       `Setting '${key}' already exists. Use updateSetting instead.`
-  //     );
-  //   }
-  // }
-
-  // // Delete an existing setting
-  // deleteSetting(key: keyof CustomSettings): void {
-  //   if (this.settings[key] !== undefined) {
-  //     delete this.settings[key];
-  //     console.log(`Deleted setting: ${key}`);
-  //   } else {
-  //     console.log(`Setting '${key}' does not exist.`);
-  //   }
-  // }
-
   // Function to get the current settings
   getSettings(): CustomSettings {
     return this.settings;

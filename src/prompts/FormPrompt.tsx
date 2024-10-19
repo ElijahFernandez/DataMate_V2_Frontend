@@ -122,6 +122,7 @@ const FormPrompt = ({
 
   const handleDelete = () => {
     console.log("Deleting form");
+    processHeaders();
     setFormType("Delete");
   };
 

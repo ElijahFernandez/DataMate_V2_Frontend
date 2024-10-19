@@ -198,6 +198,7 @@ function addPrimaryKey(table: (number | string)[][], tableName:string): void {
   
     console.log("Added an auto-increment 'id' column to the table.");
 }
+
 function getUniquePrimaryTableName(): string{
   nameid++;
   return `PrimaryTable_${nameid - 1}`;

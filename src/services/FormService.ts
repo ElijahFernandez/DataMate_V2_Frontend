@@ -4,6 +4,7 @@ import axios from "axios";
 
 
 // const API_URL = 'https://datamate-api.onrender.com'
+
 const API_URL = "http://localhost:8080";
 class FormService{
     async postForm(rprtName:string, rprtCode:string, userid:string){
@@ -42,7 +43,15 @@ class FormService{
         })
     }
 
-    
-
+    async getAllIds(idkeyColumn: string, tableName: string){
+        return axios.get(`${API_URL}/getAllIds?idKeyColumn=${idkeyColumn}&tableName=${tableName}`)
+        .then((res)=>{
+            if (res.data) {
+                return res.data;
+            }
+        }).catch((err)=>{
+            console.log(err);
+        })
+    }
 }
 export default new FormService();

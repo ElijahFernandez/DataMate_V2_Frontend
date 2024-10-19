@@ -94,7 +94,7 @@ export default function FormEditPage({
       light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
     },
     form_title_align: "left",
-    submit_button_width: "",
+    submit_button_width: "small",
     submit_button_align: "left",
     definition: "",
     shrinkForm: "false",
@@ -276,12 +276,13 @@ export default function FormEditPage({
         minHeight: "98vh",
       }}
     >
-      <Box sx={{ maxWidth: 600, margin: "auto", pt: 30 }} ref={formRef}>
+      <Box sx={{ maxWidth: 600, margin: "auto", pt: 15 }} ref={formRef}>
         <Paper
           onClick={(e) => handleFieldClick("form field", "form", e)}
           elevation={3}
           sx={{
             p: 3,
+            borderTop: "10px solid" + customSettings.theme.primary,
             position: "relative",
             cursor: "pointer",
             "&:hover": {
@@ -430,8 +431,9 @@ export default function FormEditPage({
               type="submit"
               variant="contained"
               color="primary"
+              size={customSettings.submit_button_width === "fullWidth" ? "medium" : customSettings.submit_button_width}
               sx={{
-                width: customSettings.submit_button_width,
+                width: customSettings.submit_button_width === "fullWidth" ? "100%" : "auto",
                 backgroundColor: customSettings.theme.primary,
                 "&:hover": {
                   backgroundColor: customSettings.theme.primary, // Primary color on hover
@@ -445,7 +447,6 @@ export default function FormEditPage({
           </Box>
         </Paper>
 
-        {/* ------------------------------------------------------------ */}
         {/* Modals, extensions, etc. */}
         <Modal
           open={openModal}

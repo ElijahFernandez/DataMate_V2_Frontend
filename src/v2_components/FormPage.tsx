@@ -21,6 +21,7 @@ import TrashIcon from "@mui/icons-material/Delete";
 
 import CustomSettingsManager from "../services/CustomSettingsService";
 import { CustomSettings } from "../api/dataTypes";
+import FormService from "../services/FormService";
 
 interface FormPageProps {
   startLoading: () => void;
@@ -32,6 +33,7 @@ interface FormEntity {
   dbName: string;
   tblName: string;
   formName: string;
+  formType: string;
   headers: string;
   customSettings: string;
   userId: number;
@@ -57,39 +59,58 @@ const modalStyle = {
 export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const loc = useLocation();
   const navigate = useNavigate();
-
-  const formIdFromLocation = loc.state?.formid || null; // Get formId from location state
   const { formId } = useParams<{ formId: string }>();
+  const formIdFromLocation = loc.state?.formid || null; // Get formId from location state
   const [formData, setFormData] = useState<FormData>({});
   const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
   const [anchorElEdit, setAnchorElEdit] = useState<null | HTMLElement>(null);
-  const openEdit = Boolean(anchorElEdit);
   const [isLoading, setIsLoading] = useState(true);
+  const open = Boolean(anchorEl);
+  const openEdit = Boolean(anchorElEdit);
 
   const settingsManagerRef = useRef(CustomSettingsManager);
+
   const [customSettings, setCustomSettings] = useState<CustomSettings>({
     theme: {
-      primary: "#ECDFCC", // Example primary color
-      light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
+      primary: "#ECDFCC",
+      light: "rgba(252, 250, 238, 0.6)",
     },
     form_title_fontsize: "",
     form_title_align: "left",
-    submit_button_width: "",
+    submit_button_width: "small",
     submit_button_align: "left",
     definition: "",
     shrinkForm: "false",
   });
 
+  const [isInsert, setIsInsert] = useState(false);
+  const [isModify, setIsModify] = useState(false);
+  const [isDelete, setIsDelete] = useState(false);
+
+  const [columnNameId, setColumnNameId] = useState("");
+  const [allIds, setAllIds] = useState<string[]>([]); // State to store IDs
+
+  // const [availableIds, setAvailableIds] = useState<string[]>([]);
+
+  // const fetchAvailableIds = async () => {
+  //   try {
+  //     const response = await axios.get(`http://localhost:8080/getAvailableIds?tableName=${formEntity?.tblName}`);
+  //     setAvailableIds(response.data);
+  //   } catch (error) {
+  //     console.error("Error fetching available IDs:", error);
+  //     toast.error("Failed to fetch available IDs");
+  //   }
+  // };
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        await settingsManagerRef.current.fetchSettings(Number(formId)); // Wait for fetch to complete
+        await settingsManagerRef.current.fetchSettings(Number(formId));
         const fetchedSettings = settingsManagerRef.current.getSettings();
         setCustomSettings(fetchedSettings);
-        console.log("Fetched and updated custom settings:", fetchedSettings); // Log right after setting the state
+        console.log("Fetched and updated custom settings:", fetchedSettings);
       } catch (error) {
         console.error("Error fetching custom settings:", error);
       }
@@ -108,10 +129,30 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             `http://localhost:8080/getForms/${formId}`
           );
           setFormEntity(response.data);
-          initializeFormData(response.data.headers); // Initialize form data here
+          initializeFormData(response.data.headers);
           console.log("Fetched Form Entity:", response.data);
           console.log("Fetched Form Table name:", response.data.tblName);
+          console.log("Fetched Form Headers: ", response.data.headers);
+
+          const headersJson = JSON.parse(response.data.headers);
+          const fetchedColumnNameId = Object.keys(headersJson).find(
+            (key) => headersJson[key] === "ID"
+          );
+          console.log("ID Key for Column: ", fetchedColumnNameId);
+
+          if (fetchedColumnNameId) {
+            setColumnNameId(fetchedColumnNameId);
+          } else {
+            console.error("ID Key for Column not found");
+          }
+
           const fetchedFormEntity = response.data;
+
+          setIsInsert(fetchedFormEntity.formType === "Insert");
+          setIsModify(fetchedFormEntity.formType === "Modify");
+          setIsDelete(fetchedFormEntity.formType === "Delete");
+
+          // Check if FormName has any quotation marks and remove them
           if (fetchedFormEntity.formName) {
             fetchedFormEntity.formName = fetchedFormEntity.formName.replace(
               /^"|"$/g,
@@ -139,13 +180,30 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   }, [formId, startLoading, stopLoading]);
 
   useEffect(() => {
-    // Check if settings were just saved
     if (loc.state?.settingsSaved) {
       toast.success("Form Settings saved!");
       // Clear the state so the toast doesn't show again on refresh
       navigate(loc.pathname, { replace: true, state: {} });
     }
   }, [loc, navigate]);
+
+  useEffect(() => {
+    // Fetch IDs if in modify mode and columnNameId is set
+    if (isModify && columnNameId) {
+      fetchAllIds(columnNameId, "your_table_name"); // Replace 'your_table_name' with the actual table name
+    }
+  }, [isModify, columnNameId]);
+
+  const fetchAllIds = async (idKeyColumn: string, tableName: string) => {
+    try {
+      const ids = await FormService.getAllIds(idKeyColumn, tableName);
+      if (ids) {
+        setAllIds(ids);
+      }
+    } catch (error) {
+      console.error("Error fetching IDs: ", error);
+    }
+  };
 
   const initializeFormData = (headersString: string) => {
     const headers = JSON.parse(headersString);
@@ -164,9 +222,28 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     }));
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSelectChange = (event: React.ChangeEvent<{ value: unknown }>, key: string) => {
+    setFormData({
+      ...formData,
+      [key]: event.target.value as string,
+    });
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    if (isInsert) {
+      handleInsertSubmit(event);
+    } else if (isModify) {
+      handleModifySubmit(event);
+    } else if (isDelete) {
+      handleDeleteSubmit(event);
+    } else {
+      toast.error("Unknown form type");
+    }
+  };
+
+  const handleInsertSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log("Form data to submit:", formData);
+    console.log("Insert form data to submit:", formData);
 
     const emptyFields = Object.values(formData).some(
       (value) => value.trim() === ""
@@ -176,6 +253,8 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       return;
     }
 
+    const idValue = formData[columnNameId];
+
     const payload = {
       tableName: formEntity?.tblName,
       headers: Object.keys(formData),
@@ -183,6 +262,17 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     };
 
     try {
+      const checkResponse = await fetch(
+        `http://localhost:8080/check-id?tableName=${formEntity?.tblName}&idColumn=${columnNameId}&idValue=${idValue}`
+      );
+
+      const idExists = await checkResponse.json();
+      
+      if (idExists) {
+        toast.error("The ID already exists. Please use a unique ID.");
+        return;
+      }
+
       const response = await fetch("http://localhost:8080/insert", {
         method: "POST",
         headers: {
@@ -190,6 +280,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         },
         body: JSON.stringify(payload),
       });
+
       if (response.ok) {
         toast.success("Form submitted successfully!");
       } else {
@@ -197,8 +288,59 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast.error("An error occurred while submitting the form.");
     }
   };
+
+  const handleModifySubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    console.log("Modify form data to submit:", formData);
+    toast("Modify functionality not implemented yet.");
+    // TODO: Implement modify logic
+  };
+
+  const handleDeleteSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    console.log("Delete form data to submit:", formData);
+    toast("Delete functionality not implemented yet.");
+    // TODO: Implement delete logic
+  };
+
+  // const handleSubmit = async (event: React.FormEvent) => {
+  //   event.preventDefault();
+  //   console.log("Form data to submit:", formData);
+
+  //   const emptyFields = Object.values(formData).some(
+  //     (value) => value.trim() === ""
+  //   );
+  //   if (emptyFields) {
+  //     toast.error("Please fill out all the fields before submitting.");
+  //     return;
+  //   }
+
+  //   const payload = {
+  //     tableName: formEntity?.tblName,
+  //     headers: Object.keys(formData),
+  //     values: Object.values(formData),
+  //   };
+
+  //   try {
+  //     const response = await fetch("http://localhost:8080/insert", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(payload),
+  //     });
+  //     if (response.ok) {
+  //       toast.success("Form submitted successfully!");
+  //     } else {
+  //       toast.error("Failed to submit form.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error submitting form:", error);
+  //   }
+  // };
 
   const handleEditClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElEdit(event.currentTarget);
@@ -233,9 +375,9 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   // utility function to parse headers
   function formatLabel(label: string): string {
     return label
-      .split("_") // Split the string by underscores
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
-      .join(" "); // Join the words back together with spaces
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   }
 
   const headers = JSON.parse(formEntity.headers);
@@ -250,28 +392,11 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       }}
     >
       <Box sx={{ maxWidth: 600, margin: "auto" }}>
-        {/* <IconButton
-        sx={{ position: "absolute", top: 80, right: 20 }}
-        onClick={handleOnClickIcon}
-      >
-        <MoreVertIcon />
-      </IconButton> */}
-        <Menu anchorEl={anchorEl} open={open} onClose={handleCloseMenu}>
-          <MenuItem
-            onClick={() => {
-              setOpenModal(true);
-              handleCloseMenu();
-            }}
-          >
-            Delete
-          </MenuItem>
-        </Menu>
         <Paper
           elevation={3}
           sx={{
-            p: 3,
-            // position: "relative",
-            // backgroundColor: "white",
+            p: 5,
+            borderTop: "10px solid" + customSettings.theme.primary,
           }}
         >
           <Toaster position="top-center" reverseOrder={false} />
@@ -279,13 +404,21 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           <Typography
             variant="h4"
             gutterBottom
-            align={customSettings.form_title_align} // set form title dynamically
+            align={customSettings.form_title_align}
           >
             {formEntity.formName}
           </Typography>
+          {/* <Typography variant="body2" gutterBottom>
+            {formEntity.tblName +
+              " | " +
+              formEntity.createdAt +
+              " | " +
+              formEntity.formType}
+          </Typography> */}
           <Typography variant="body1" gutterBottom>
             {customSettings.definition}
           </Typography>
+          
           <form onSubmit={handleSubmit}>
             {Object.entries(headers).map(([key, value]) => (
               <TextField
@@ -321,7 +454,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             <Box
               sx={{
                 display: "flex",
-                // set button alignment dynamically
                 justifyContent:
                   customSettings.submit_button_align === "left"
                     ? "flex-start"
@@ -337,20 +469,34 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
                 onClick={handleSubmit}
                 type="submit"
                 variant="contained"
+                size={
+                  customSettings.submit_button_width === "fullWidth"
+                    ? "medium"
+                    : customSettings.submit_button_width
+                }
                 sx={{
-                  width: customSettings.submit_button_width,
+                  width:
+                    customSettings.submit_button_width === "fullWidth"
+                      ? "100%"
+                      : "auto",
                   backgroundColor: customSettings.theme.primary,
                   "&:hover": {
-                    backgroundColor: customSettings.theme.primary, // Primary color on hover
-                    color: "#fff", // White text color on hover
+                    backgroundColor: customSettings.theme.primary,
+                    color: "#fff",
                   },
-                  transition: "background-color 0.3s, color 0.3s", // Smooth transition effect
+                  transition: "background-color 0.3s, color 0.3s",
                 }}
               >
-                Submit
+                {isInsert
+                  ? "Submit"
+                  : isModify
+                  ? "Modify"
+                  : isDelete
+                  ? "Delete"
+                  : "Submit"}
               </Button>
             </Box>
-          </form> 
+          </form>
         </Paper>
         <Popover
           open={openEdit}
@@ -363,7 +509,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           transformOrigin={{
             vertical: "bottom",
             horizontal: "left",
-          }}  
+          }}
           sx={{
             ".MuiPaper-root": {
               borderRadius: "20px",
@@ -436,6 +582,17 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             </Box>
           </Box>
         </Modal>
+
+        {/* <Menu anchorEl={anchorEl} open={open} onClose={handleCloseMenu}>
+          <MenuItem
+            onClick={() => {
+              setOpenModal(true);
+              handleCloseMenu();
+            }}
+          >
+            Delete
+          </MenuItem>
+        </Menu> */}
       </Box>
     </Box>
   );

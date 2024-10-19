@@ -60,10 +60,6 @@ const styles = {
     maxWidth: "500px",
     width: "90%",
   },
-  dialogPaper: {
-    backgroundColor: "#DCF1EC",
-    padding: "25px",
-  },
   uploadButton: {
     marginTop: "10px",
     borderRadius: "20px",
@@ -127,7 +123,7 @@ const FormDetailsPrompt = ({
       light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
     },
     form_title_align: "left",
-    submit_button_width: "100",
+    submit_button_width: "small",
     submit_button_align: "left",
     definition: "",
     shrinkForm: "noShrink",
@@ -155,6 +151,7 @@ const FormDetailsPrompt = ({
         dbName: dbName,
         tblName: tblName,
         formName: localFormName,
+        formType: formType,
         headers: JSON.stringify(headersObject),
         customSettings: JSON.stringify(defaultCustomSettings), // You can modify this as needed
         userId: userId,

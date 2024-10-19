@@ -53,6 +53,7 @@ export interface FormEntity {
   dbName: string;
   tblName: string;
   formName: string;
+  formType: string;
   headers: string;
   customSettings: string;
   userId: number;
@@ -77,7 +78,7 @@ export type CustomSettings = {
     light: string;
   };
   form_title_align: "center" | "left" | "right";
-  submit_button_width: string;
+  submit_button_width: "small" | "medium" | "fullWidth";
   submit_button_align: "center" | "left" | "right";
   definition: string;
   shrinkForm: "true" | "false" | "trueWithPlaceholder" | "noShrink";
