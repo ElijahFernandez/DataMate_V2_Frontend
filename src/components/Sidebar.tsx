@@ -433,9 +433,9 @@ export default function Sidebar({
       </div>
 
       {selectedFieldType === "form title" && renderFormTitleSettings()}
-      {selectedFieldType === "textfield" && renderTextFieldSettings()}
+      {/* {selectedFieldType === "textfield" && renderTextFieldSettings()} */}
       {selectedFieldType === "button" && renderButtonSettings()}
-      {selectedFieldType === "form" && renderFormFieldSettings()}
+      {(selectedFieldType === "form" || selectedFieldType === "textfield") && renderFormFieldSettings()}
       {/* <Button
         variant="contained"
         color="secondary"

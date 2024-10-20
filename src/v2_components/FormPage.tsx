@@ -14,6 +14,8 @@ import {
   MenuItem,
   Modal,
   Popover,
+  Select,
+  SelectChangeEvent,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
@@ -69,7 +71,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const open = Boolean(anchorEl);
   const openEdit = Boolean(anchorElEdit);
-
+  const [fetchedTblName, setFetchedTblName] = useState<string>("");
   const settingsManagerRef = useRef(CustomSettingsManager);
 
   const [customSettings, setCustomSettings] = useState<CustomSettings>({
@@ -128,15 +130,16 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           const response = await axios.get(
             `http://localhost:8080/getForms/${formId}`
           );
+          const fetchedFormEntity = response.data;
           setFormEntity(response.data);
           initializeFormData(response.data.headers);
-          console.log("Fetched Form Entity:", response.data);
-          console.log("Fetched Form Table name:", response.data.tblName);
-          console.log("Fetched Form Headers: ", response.data.headers);
-
-          const headersJson = JSON.parse(response.data.headers);
-          const fetchedColumnNameId = Object.keys(headersJson).find(
-            (key) => headersJson[key] === "ID"
+          // console.log("Fetched Form Entity:", response.data);
+          // console.log("Fetched Form Table name:", response.data.tblName);
+          // console.log("Fetched Form Headers: ", response.data.headers);
+          setFetchedTblName(response.data.tblName);
+          const headers = JSON.parse(fetchedFormEntity.headers);
+          const fetchedColumnNameId = Object.keys(headers).find(
+            (key) => headers[key] === "ID"
           );
           console.log("ID Key for Column: ", fetchedColumnNameId);
 
@@ -145,8 +148,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           } else {
             console.error("ID Key for Column not found");
           }
-
-          const fetchedFormEntity = response.data;
 
           setIsInsert(fetchedFormEntity.formType === "Insert");
           setIsModify(fetchedFormEntity.formType === "Modify");
@@ -189,8 +190,8 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
 
   useEffect(() => {
     // Fetch IDs if in modify mode and columnNameId is set
-    if (isModify && columnNameId) {
-      fetchAllIds(columnNameId, "your_table_name"); // Replace 'your_table_name' with the actual table name
+    if ((isModify || isDelete) && columnNameId) {
+      fetchAllIds(columnNameId, fetchedTblName); // Replace 'your_table_name' with the actual table name
     }
   }, [isModify, columnNameId]);
 
@@ -205,6 +206,28 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     }
   };
 
+  const convertDateFormat = (
+    dateString: string,
+    fromFormat: string,
+    toFormat: string
+  ) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return original string if it's not a valid date
+    }
+
+    if (toFormat === "yyyy-MM-dd") {
+      return date.toISOString().split("T")[0];
+    } else if (toFormat === "MM/dd/yyyy") {
+      return `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date
+        .getDate()
+        .toString()
+        .padStart(2, "0")}/${date.getFullYear()}`;
+    }
+
+    return dateString; // Default case: return original string
+  };
+
   const initializeFormData = (headersString: string) => {
     const headers = JSON.parse(headersString);
     const initialData: FormData = {};
@@ -214,19 +237,84 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     setFormData(initialData);
   };
 
+  // const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const { name, value } = event.target;
+  //   setFormData((prevData) => ({
+  //     ...prevData,
+  //     [name]: value,
+  //   }));
+  // };
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    const headerType = JSON.parse(formEntity?.headers || "{}")[name];
+
+    if (headerType === "date") {
+      // Convert from yyyy-MM-dd to MM/dd/yyyy for storage
+      const convertedValue = convertDateFormat(
+        value,
+        "yyyy-MM-dd",
+        "MM/dd/yyyy"
+      );
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: convertedValue,
+      }));
+    } else {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
 
-  const handleSelectChange = (event: React.ChangeEvent<{ value: unknown }>, key: string) => {
-    setFormData({
-      ...formData,
-      [key]: event.target.value as string,
-    });
+  // const handleSelectChange = (event: SelectChangeEvent<string>, key: string) => {
+  //   setFormData({
+  //     ...formData,
+  //     [key]: event.target.value as string,
+  //   });
+  // };
+  const handleSelectChange = async (
+    event: SelectChangeEvent<string>,
+    key: string
+  ) => {
+    const selectedId = event.target.value as string;
+    setFormData((prevData) => ({
+      ...prevData,
+      [key]: selectedId,
+    }));
+
+    try {
+      const rowData = await FormService.getRowDataById(
+        fetchedTblName,
+        columnNameId,
+        selectedId
+      );
+      console.log("Fetched row data:", rowData);
+      if (rowData) {
+        const updatedRowData = Object.entries(rowData).reduce(
+          (acc, [key, value]) => {
+            if (
+              typeof value === "string" &&
+              value.match(/^\d{2}\/\d{2}\/\d{4}$/)
+            ) {
+              // Convert date from MM/dd/yyyy to yyyy-MM-dd for display
+              acc[key] = convertDateFormat(value, "MM/dd/yyyy", "yyyy-MM-dd");
+            } else {
+              acc[key] = value;
+            }
+            return acc;
+          },
+          {} as Record<string, any>
+        );
+
+        setFormData((prevData) => ({
+          ...prevData,
+          ...updatedRowData,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching row data:", error);
+    }
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -267,7 +355,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       );
 
       const idExists = await checkResponse.json();
-      
+
       if (idExists) {
         toast.error("The ID already exists. Please use a unique ID.");
         return;
@@ -295,15 +383,85 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const handleModifySubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     console.log("Modify form data to submit:", formData);
-    toast("Modify functionality not implemented yet.");
-    // TODO: Implement modify logic
+
+    if (!formEntity) {
+      toast.error("Form entity is not available.");
+      return;
+    }
+
+    // const emptyFields = Object.values(formData).some(value => value.trim() === "");
+    // if (emptyFields) {
+    //   toast.error("Please fill out all the fields before submitting.");
+    //   return;
+    // }
+
+    const headers = Object.keys(formData);
+    const values = Object.values(formData);
+
+    // Create the condition for the WHERE clause
+    const condition = `${columnNameId} = '${formData[columnNameId]}'`;
+
+    const payload = {
+      tableName: formEntity.tblName,
+      headers: headers,
+      values: values,
+      conditions: condition,
+    };
+
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/modify",
+        payload
+      );
+      if (response.status === 200) {
+        toast.success("Form modified successfully!");
+      } else {
+        toast.error("Failed to modify form.");
+      }
+    } catch (error) {
+      console.error("Error modifying form:", error);
+      toast.error("An error occurred while modifying the form.");
+    }
   };
 
   const handleDeleteSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     console.log("Delete form data to submit:", formData);
-    toast("Delete functionality not implemented yet.");
-    // TODO: Implement delete logic
+
+    if (!formEntity) {
+      toast.error("Form entity is not available.");
+      return;
+    }
+
+    const idToDelete = formData[columnNameId];
+    if (!idToDelete) {
+      toast.error("Please select an ID to delete.");
+      return;
+    }
+
+    // Show a confirmation dialog
+    if (window.confirm(`Are you sure you want to delete the record with ID ${idToDelete}?`)) {
+      try {
+        const response = await axios.post(`http://localhost:8080/deleteRow`, {
+          tableName: formEntity.tblName,
+          idColumn: columnNameId,
+          idValue: idToDelete
+        });
+
+        if (response.status === 200) {
+          toast.success("Record deleted successfully!");
+          // Reset form data after successful deletion
+          setFormData({});
+          // Refresh the list of available IDs
+          fetchAllIds(columnNameId, fetchedTblName);
+        } else {
+          toast.error("Failed to delete record.");
+        }
+      } catch (error) {
+        console.error("Error deleting record:", error);
+        toast.error("An error occurred while deleting the record.");
+      }
+    }
   };
 
   // const handleSubmit = async (event: React.FormEvent) => {
@@ -418,39 +576,76 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           <Typography variant="body1" gutterBottom>
             {customSettings.definition}
           </Typography>
-          
+
           <form onSubmit={handleSubmit}>
-            {Object.entries(headers).map(([key, value]) => (
-              <TextField
-                key={key}
-                fullWidth
-                margin="normal"
-                name={key}
-                placeholder={
-                  customSettings.shrinkForm === "trueWithPlaceholder"
-                    ? `Enter ${formatLabel(key as string)}`
-                    : ""
-                }
-                label={formatLabel(key as string)}
-                value={formData[key] || ""}
-                onChange={handleInputChange}
-                type={value as string}
-                InputLabelProps={{
-                  shrink:
-                    value === "date"
-                      ? true
-                      : customSettings.shrinkForm === "true"
-                      ? true
-                      : customSettings.shrinkForm === "false"
-                      ? false
-                      : customSettings.shrinkForm === "trueWithPlaceholder"
-                      ? true
-                      : customSettings.shrinkForm === "noShrink"
-                      ? undefined
-                      : undefined,
-                }}
-              />
-            ))}
+            {Object.entries(headers).map(([key, value]) =>
+              key === columnNameId && (isModify || isDelete) ? (
+                <Select
+                  key={key}
+                  fullWidth
+                  margin="dense"
+                  value={formData[key] || ""}
+                  onChange={(e) => handleSelectChange(e, key)}
+                  displayEmpty
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 48 * 4.5 + 8,
+                        width: "20ch",
+                      },
+                    },
+                    anchorOrigin: {
+                      vertical: "bottom",
+                      horizontal: "left",
+                    },
+                    transformOrigin: {
+                      vertical: "top",
+                      horizontal: "left",
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    Select {formatLabel(key)}
+                  </MenuItem>
+                  {allIds.map((id) => (
+                    <MenuItem key={id} value={id}>
+                      {id}
+                    </MenuItem>
+                  ))}
+                </Select>
+              ) : (
+                <TextField
+                  key={key}
+                  fullWidth
+                  margin="normal"
+                  name={key}
+                  placeholder={
+                    customSettings.shrinkForm === "trueWithPlaceholder"
+                      ? `Enter ${formatLabel(key as string)}`
+                      : ""
+                  }
+                  label={formatLabel(key as string)}
+                  value={formData[key] || ""}
+                  onChange={handleInputChange}
+                  type={value as string}
+                  disabled={isDelete && key !== columnNameId}
+                  InputLabelProps={{
+                    shrink:
+                      value === "date"
+                        ? true
+                        : customSettings.shrinkForm === "true"
+                        ? true
+                        : customSettings.shrinkForm === "false"
+                        ? false
+                        : customSettings.shrinkForm === "trueWithPlaceholder"
+                        ? true
+                        : customSettings.shrinkForm === "noShrink"
+                        ? undefined
+                        : undefined,
+                  }}
+                />
+              )
+            )}
             <Box
               sx={{
                 display: "flex",

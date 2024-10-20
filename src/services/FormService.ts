@@ -53,5 +53,25 @@ class FormService{
             console.log(err);
         })
     }
+
+    async getRowDataById(tableName: string, idKeyColumn: string, idValue: string) {
+        try {
+            const response = await axios.post(`${API_URL}/getRowData`, {
+                tableName: tableName,
+                idColumn: idKeyColumn,
+                idValue: idValue
+            });
+    
+            if (response.data) {
+                return response.data;
+            } else {
+                return null; // Handle the case when no data is found
+            }
+        } catch (error) {
+            console.error('Error fetching row data:', error);
+            throw error; // Re-throw or handle the error based on your needs
+        }
+    }
+    
 }
 export default new FormService();
