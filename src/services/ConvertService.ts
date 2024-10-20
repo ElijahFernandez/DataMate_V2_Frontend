@@ -4,12 +4,10 @@ import axios from "axios";
 const API_KEY = 'KowVpR9gEn3n3ga0ORmZEgVHS2Z3mMslTP3jj6v6AdTwtohxfPrSuglg77zXP17rEAHS4FwtwMdsB2dwZBz5A';
 class ConvertService{
 
-    async postCommand(tableName:string, strVals:string, op:number){
+    async postCommand(sqlCode: string){
         // return axios.post('https://datamate-api.onrender.com/convert',{
         return axios.post('http://localhost:8080/convert',{
-            tblName: tableName,
-            vals: strVals,
-            operation: op,
+            sqlCode: sqlCode,
         })
         .then((res)=>{
             return res.data

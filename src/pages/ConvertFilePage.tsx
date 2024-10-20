@@ -56,9 +56,10 @@ interface WorkbookData {
 }
 
 type ConvertCommand = {
-    tblName: string;
-    tblColumns: string;
-    insertValues: string;
+  tblName: string;
+  tblColumns: string;
+  insertValues: string;
+  primaryKey: string;
 }
 
 type DatabaseResponse = {
@@ -475,32 +476,51 @@ function hasCorrespondingValue(table: (string | number)[][], columnName1: string
         throw new Error("JSON array is empty.");
     }
 
-    // Get column names
     const columns: string[] = Object.keys(jsonData[0]);
-    // Clean table name for SQL compliance
     let newTblName = tableName.replace(/[^a-zA-Z0-9]/g, '_'); 
     console.log("new name: ", newTblName);
+    
+    // Construct the column definitions
+    const tblColsQuery = `(${columns.map(col => `${col.replace(/[^a-zA-Z0-9]/g,'_')} ${getColumnType(jsonData[0][col])}`).join(', ')})`;
 
-    // Determine the primary key column
-    const primaryKey = identifyPrimaryKey(jsonData) || columns[0];
+    // Initialize primary key as undefined
+    let primaryKey: string | undefined;
 
-    // CREATE TABLE
-    const tblColsQuery = `(${columns.map(col => `${col.replace(/[^a-zA-Z0-9]/g,'_')} ${getColumnType(jsonData[0][col])}`).join(', ')}${primaryKey ? `, PRIMARY KEY(${primaryKey.replace(/[^a-zA-Z0-9]/g,'_')})` : ''});`;
-    console.log(tblColsQuery);
+    // 1. Look for the first column with numeric unique values
+    for (const col of columns) {
+        const values = jsonData.map(record => record[col]);
+        const uniqueValues = new Set(values);
+        
+        // Check if all values are numbers and unique
+        if (values.every(val => typeof val === 'number') && uniqueValues.size === values.length) {
+            primaryKey = col.replace(/[^a-zA-Z0-9]/g,'_');  // Sanitize primary key name
+            break;  // Stop after finding the first valid primary key
+        }
+    }
 
-    // INSERT INTO
+    // 2. If no numeric unique column is found, check for "id" in column headers
+    if (!primaryKey) {
+        primaryKey = columns.find(col => col.toLowerCase().includes('id'))?.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize name
+    }
+
+    // 3. If still nothing, choose the first column as primary key by default
+    if (!primaryKey) {
+        primaryKey = columns[0].replace(/[^a-zA-Z0-9]/g, '_');  // Sanitize name
+    }
+
+    // Construct insert values
     const insertValues = jsonData.map(record => `(${columns.map(col => {
         const value = record[col];
-        if (value === "NULL") {
+        if(value === "NULL"){
             return 'NULL';
         }
         if (typeof value === "string") {
             return `'${value}'`;
         } else if (value instanceof Date) {
             // Format date as 'YYYY-MM-DD'
-            return `'${value.toISOString().split("T")[0]}'`;
+            return `'${value.toISOString().split('T')[0]}'`;
         } else {
-            if ((value as number) > 2000000000) {
+            if(value as number > 2000000000){
                 return `'${value}'`;
             } else {
                 return value;
@@ -510,12 +530,14 @@ function hasCorrespondingValue(table: (string | number)[][], columnName1: string
 
     let SQLcolumns: string[] = Object.keys(jsonData[0]).map(key => key.replace(/[^a-zA-Z0-9]/g, '_'));
     console.log("join: ", SQLcolumns.join(', '));
+    
     const valsQuery = `(${SQLcolumns.join(', ')}) VALUES ${insertValues};`;
-
+    
     return {
-        tblName: `${newTblName}`,
-        tblColumns: `${tblColsQuery}`,
-        insertValues: `${valsQuery}`
+        tblName: newTblName,
+        tblColumns: tblColsQuery,
+        insertValues: valsQuery,
+        primaryKey: primaryKey,  // Include identified primary key
     };
 }
  
@@ -622,30 +644,115 @@ function hasCorrespondingValue(table: (string | number)[][], columnName1: string
     //     alert("ERROR: Workbook is NULL or undefined");
     // }
 
-    useEffect(()=>{
-        if(SQLCommands !== null && SQLCommands.length > 0){
-            console.log("SQL Commands are: ", SQLCommands);
-            let i = 0;
-            SQLCommands.map((com, i)=>{
-            ConvertService.postCommand(com.tblName, com.tblColumns, 1)
-            .then((res)=>{
-                console.log("Table Created!");
-                ConvertService.postCommand(com.tblName, com.insertValues, 2)
-                .then((res)=>{
-                    i++;
-                    console.log("Values Inserted!");
-                    if(i === SQLCommands.length){
-                        setDone(true);
-                    }            
-                }).catch((err)=>{
-                    console.log(err);
-                })
-            }).catch((err)=>{
-                console.log(err);
-            })
-            })
+    useEffect(() => {
+      if (SQLCommands !== null && SQLCommands.length > 0) {
+          console.log("SQL Commands are: ", SQLCommands);
+  
+          const executeSQLForTable = async (com: ConvertCommand) => {
+              const createQuery = getCreateAndInsertQuery(com);
+              const alterQuery = getAlterQuery(SQLCommands);
+  
+            // console.log("CREATE AND INSERT: ", createQuery);
+            if (!alterQuery) {
+                console.log(`No foreign keys to alter for table ${com.tblName}`);
+            } else {
+                console.log("ALTER: ", alterQuery);
+            }
+          
+              // Combine create, insert, and alter queries
+              let completeSQLQuery = `${createQuery} ${alterQuery}`;
+              completeSQLQuery = completeSQLQuery.trim().replace(/;;/g, ';'); // Ensure no double semicolons
+              // Check if completeSQLQuery is a string
+              console.log("Type of completeSQLQuery:", typeof completeSQLQuery);
+              // Send the complete SQL query to the backend
+              // Ensure it is a string before sending to the backend
+              if (typeof completeSQLQuery === 'string') {
+                console.log("completeSQLQuery is a valid string. Sending to backend...");
+                await ConvertService.postCommand(completeSQLQuery);
+              } else {
+                  console.error("completeSQLQuery is not a string! Check the query generation.");
+              }
+          };
+  
+          // Execute SQL for each command one by one
+          const executeCommandsSequentially = async () => {
+              for (const com of SQLCommands) {
+                  await executeSQLForTable(com);
+              }
+              setDone(true); // Set done once all commands have been processed
+          };
+  
+          executeCommandsSequentially();
+      }
+  }, [SQLCommands]);
+  
+  
+  function getCreateAndInsertQuery(
+    sqlCommand: ConvertCommand,
+  ): string {
+    const { tblName, tblColumns, insertValues, primaryKey } = sqlCommand;
+  
+    // Check if tblColumns is valid
+    if (!tblColumns || !tblName) {
+        throw new Error("Table name or columns definition is missing.");
+    }
+  
+    let returnStr = `CREATE TABLE ${tblName} ${tblColumns}`;
+  
+    const transformedPrimaryKeyColumn = primaryKey.replace(/[^a-zA-Z0-9]/g, "_");
+    returnStr = returnStr.replace(/\)\s*$/, `, PRIMARY KEY(${transformedPrimaryKeyColumn}));`); // Append the primary key
+    // Handle insert values if provided
+    if (insertValues) {
+        returnStr += ` INSERT INTO ${tblName} ${insertValues}`;
+    }
+  
+    return returnStr;
+  }
+  
+  function getAlterQuery(commands: ConvertCommand[]): string {
+    let alterQueries: string[] = [];
+  
+    // Create a mapping of table names to their primary keys
+    const primaryKeys: { [tableName: string]: string } = {};
+  
+    commands.forEach(command => {
+      if (command.primaryKey) {
+        primaryKeys[command.tblName] = command.primaryKey;
+      }
+    });
+  
+    console.log('Primary Keys:', primaryKeys); // Debugging
+  
+    // Iterate through each command to build ALTER TABLE queries for foreign keys
+    commands.forEach(command => {
+      // Use a regex to capture column definitions
+      const matches = command.tblColumns.match(/(\w+\s+\w+(\(\d+\))?)/g);
+      // Check if matches is null and handle it
+      const currentColumns = matches ? matches.map(col => col.trim().split(' ')[0]) : [];
+  
+      currentColumns.forEach(col => {
+        // Normalize the col name for comparison
+        const normalizedCol = col.toLowerCase();
+  
+        // Find the table that has this column as a primary key
+        const referencedTable = Object.keys(primaryKeys).find(tblName => primaryKeys[tblName].toLowerCase() === normalizedCol);
+  
+        // Ensure that the referenced table is not the same as the current table
+        if (referencedTable && referencedTable !== command.tblName) {
+          // Append the ALTER TABLE query
+          alterQueries.push(`ALTER TABLE ${command.tblName} ADD FOREIGN KEY (${col}) REFERENCES ${referencedTable}(${primaryKeys[referencedTable]});`);
+        } else if (referencedTable) {
+          console.log(`Cannot add foreign key for ${col} referencing itself in table: ${command.tblName}`); // Debugging
+        } else {
+          console.log(`No referenced table found for column: ${col}`); // Debugging
         }
-    }, [SQLCommands])
+      });
+    });
+  
+    // Return all the generated ALTER TABLE queries, joined together
+    return alterQueries.join('\n');
+  }
+  
 
     useEffect(()=>{
         if(isDone){
