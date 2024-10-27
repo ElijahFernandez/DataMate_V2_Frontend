@@ -17,10 +17,7 @@ import {
   Select,
   SelectChangeEvent,
 } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
-import TrashIcon from "@mui/icons-material/Delete";
-
 import CustomSettingsManager from "../services/CustomSettingsService";
 import { CustomSettings } from "../api/dataTypes";
 import FormService from "../services/FormService";
@@ -92,6 +89,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const [isDelete, setIsDelete] = useState(false);
 
   const [columnNameId, setColumnNameId] = useState("");
+  const [dates, setDates] = useState<string[]>([]);
   const [allIds, setAllIds] = useState<string[]>([]); // State to store IDs
 
   // const [availableIds, setAvailableIds] = useState<string[]>([]);
@@ -127,17 +125,19 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         startLoading();
         setIsLoading(true);
         try {
-          const response = await axios.get(
-            `http://localhost:8080/getForms/${formId}`
-          );
-          const fetchedFormEntity = response.data;
-          setFormEntity(response.data);
-          initializeFormData(response.data.headers);
-          // console.log("Fetched Form Entity:", response.data);
+          // const response = await axios.get(
+          //   `http://localhost:8080/getForms/${formId}`
+          // );
+          const fetchedFormEntity = await FormService.getFormById(formId);
+          setFormEntity(fetchedFormEntity);
+          initializeFormData(fetchedFormEntity.headers);
+
+          console.log("Fetched Form Entity:", fetchedFormEntity);
           // console.log("Fetched Form Table name:", response.data.tblName);
-          // console.log("Fetched Form Headers: ", response.data.headers);
-          setFetchedTblName(response.data.tblName);
+          console.log("Fetched Form Headers: ", fetchedFormEntity.headers);
+          setFetchedTblName(fetchedFormEntity.tblName);
           const headers = JSON.parse(fetchedFormEntity.headers);
+
           const fetchedColumnNameId = Object.keys(headers).find(
             (key) => headers[key] === "ID"
           );
@@ -148,6 +148,11 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           } else {
             console.error("ID Key for Column not found");
           }
+
+          const fetchedColumnDate = Object.keys(headers).find(
+            (key) => headers[key] === "date"
+          );
+          console.log("ID Key for Column with date: ", fetchedColumnDate);
 
           setIsInsert(fetchedFormEntity.formType === "Insert");
           setIsModify(fetchedFormEntity.formType === "Modify");
@@ -213,7 +218,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   ) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return dateString; // Return original string if it's not a valid date
+      return dateString;
     }
 
     if (toFormat === "yyyy-MM-dd") {
@@ -225,7 +230,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         .padStart(2, "0")}/${date.getFullYear()}`;
     }
 
-    return dateString; // Default case: return original string
+    return dateString;
   };
 
   const initializeFormData = (headersString: string) => {
@@ -237,13 +242,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     setFormData(initialData);
   };
 
-  // const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   const { name, value } = event.target;
-  //   setFormData((prevData) => ({
-  //     ...prevData,
-  //     [name]: value,
-  //   }));
-  // };
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     const headerType = JSON.parse(formEntity?.headers || "{}")[name];
@@ -267,12 +265,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     }
   };
 
-  // const handleSelectChange = (event: SelectChangeEvent<string>, key: string) => {
-  //   setFormData({
-  //     ...formData,
-  //     [key]: event.target.value as string,
-  //   });
-  // };
   const handleSelectChange = async (
     event: SelectChangeEvent<string>,
     key: string
@@ -299,6 +291,9 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             ) {
               // Convert date from MM/dd/yyyy to yyyy-MM-dd for display
               acc[key] = convertDateFormat(value, "MM/dd/yyyy", "yyyy-MM-dd");
+            } else if (typeof value === "string" && value.match(/\$\d+/)) {
+              // Remove any special characters and keep only integers
+              acc[key] = value.replace(/[^\d]/g, "");
             } else {
               acc[key] = value;
             }
@@ -350,35 +345,83 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     };
 
     try {
-      const checkResponse = await fetch(
-        `http://localhost:8080/check-id?tableName=${formEntity?.tblName}&idColumn=${columnNameId}&idValue=${idValue}`
-      );
+      // const checkResponse = await fetch(
+      //   `http://localhost:8080/check-id?tableName=${formEntity?.tblName}&idColumn=${columnNameId}&idValue=${idValue}`
+      // );
 
-      const idExists = await checkResponse.json();
+      const idExists = await FormService.checkIfIdExists(
+        formEntity?.tblName || "",
+        columnNameId,
+        idValue
+      );
 
       if (idExists) {
         toast.error("The ID already exists. Please use a unique ID.");
         return;
       }
 
-      const response = await fetch("http://localhost:8080/insert", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+      const response = await FormService.insertValues({
+        tableName: formEntity?.tblName || "",
+        headers: Object.keys(formData),
+        values: Object.values(formData),
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         toast.success("Form submitted successfully!");
       } else {
-        toast.error("Failed to submit form.");
+        toast.error(`Failed to submit form: ${response.statusText}`);
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("An error occurred while submitting the form.");
     }
   };
+
+  // const handleInsertSubmit = async (event: React.FormEvent) => {
+  //   event.preventDefault();
+  //   console.log("Insert form data to submit:", formData);
+
+  //   const emptyFields = Object.values(formData).some(
+  //     (value) => value.trim() === ""
+  //   );
+  //   if (emptyFields) {
+  //     toast.error("Please fill out all the fields before submitting.");
+  //     return;
+  //   }
+
+  //   const idValue = formData[columnNameId];
+
+  //   try {
+  //           // Check if ID exists
+  //           const idExists = await FormService.checkIfIdExists(
+  //               formEntity?.tblName || '',
+  //               columnNameId,
+  //               idValue
+  //           );
+
+  //           if (idExists) {
+  //               toast.error("The ID already exists. Please use a unique ID.");
+  //               // setIsSubmitting(false);
+  //               return;
+  //           }
+
+  //           // Prepare and submit form data
+  //           await FormService.insertValues({
+  //               tableName: formEntity?.tblName || '',
+  //               headers: Object.keys(formData),
+  //               values: Object.values(formData)
+  //           });
+
+  //           toast.success("Form submitted successfully!");
+  //           // Optional: Reset form or redirect
+  //           // setFormData({});
+  //       } catch (error) {
+  //           console.error("Error submitting form:", error);
+  //           toast.error("An error occurred while submitting the form.");
+  //       } finally {
+  //           // setIsSubmitting(false);
+  //       }
+  // };
 
   const handleModifySubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -409,10 +452,17 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     };
 
     try {
-      const response = await axios.post(
-        "http://localhost:8080/modify",
-        payload
-      );
+      // const response = await axios.post(
+      //   "http://localhost:8080/modify",
+      //   payload
+      // );
+      const response = await FormService.modifyValues({
+        tableName: formEntity?.tblName || "",
+        headers: Object.keys(formData),
+        values: Object.values(formData),
+        condition: condition,
+      });
+
       if (response.status === 200) {
         toast.success("Form modified successfully!");
       } else {
@@ -440,13 +490,17 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     }
 
     // Show a confirmation dialog
-    if (window.confirm(`Are you sure you want to delete the record with ID ${idToDelete}?`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete the record with ID ${idToDelete}?`
+      )
+    ) {
       try {
-        const response = await axios.post(`http://localhost:8080/deleteRow`, {
-          tableName: formEntity.tblName,
-          idColumn: columnNameId,
-          idValue: idToDelete
-        });
+        const response = await FormService.deleteRow(
+          formEntity.tblName,
+          columnNameId,
+          idToDelete
+        );
 
         if (response.status === 200) {
           toast.success("Record deleted successfully!");
@@ -540,6 +594,14 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
 
   const headers = JSON.parse(formEntity.headers);
 
+  const formatDate = (date: string): string => {
+    const parsedDate = new Date(date);
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(parsedDate.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   return (
     <Box
       sx={{
@@ -566,13 +628,13 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
           >
             {formEntity.formName}
           </Typography>
-          {/* <Typography variant="body2" gutterBottom>
+          <Typography variant="body2" gutterBottom>
             {formEntity.tblName +
               " | " +
               formEntity.createdAt +
               " | " +
               formEntity.formType}
-          </Typography> */}
+          </Typography>
           <Typography variant="body1" gutterBottom>
             {customSettings.definition}
           </Typography>
@@ -625,7 +687,12 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
                       : ""
                   }
                   label={formatLabel(key as string)}
-                  value={formData[key] || ""}
+                  value={
+                    value === "date" && formData[key]
+                      ? formatDate(formData[key])
+                      : formData[key] || ""
+                  }
+                  // value={formData[key] || ""}
                   onChange={handleInputChange}
                   type={value as string}
                   disabled={isDelete && key !== columnNameId}

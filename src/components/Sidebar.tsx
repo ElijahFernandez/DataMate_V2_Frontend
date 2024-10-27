@@ -20,7 +20,7 @@ import { CustomSettings } from "../api/dataTypes";
 
 interface SidebarProps {
   selectedField: string | null; // Keep this for context
-  selectedFieldType: string | null;
+  selectedFieldType: string | null; 
   customSettings: CustomSettings;
   startLoading: () => void;
   stopLoading: () => void;
@@ -51,9 +51,9 @@ export default function Sidebar({
   const { formId } = useParams<{ formId: string }>();
   const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [buttonWidth, setButtonWidth] = useState<"small" | "medium" | "fullWidth">(
-    "small"
-  );
+  const [buttonWidth, setButtonWidth] = useState<
+    "small" | "medium" | "fullWidth"
+  >("small");
   const [buttonAlign, setButtonAlign] = useState<"center" | "left" | "right">(
     "left"
   );
@@ -69,6 +69,9 @@ export default function Sidebar({
   const [formName, setFormName] = useState(
     formEntity ? formEntity.formName : ""
   );
+  useEffect(() => {
+    console.log("Selected Field Type:", selectedFieldType);
+  }, [selectedFieldType]);
 
   const handleFormTitleChange = async (formId: number, newFormName: string) => {
     try {
@@ -163,11 +166,9 @@ export default function Sidebar({
       </div>
       <Divider sx={{ my: 1 }} />
       <FormControl fullWidth margin="normal">
-        {/* <InputLabel>Alignment</InputLabel> */}
         <Typography variant="body2" sx={{ mb: 1 }}>
           Form Title Alignment
         </Typography>
-
         <Select
           value={formTitleAlign}
           onChange={(event: SelectChangeEvent<string>) =>
@@ -234,13 +235,15 @@ export default function Sidebar({
       </div>
       <Divider sx={{ my: 1 }} />
       <FormControl fullWidth margin="normal">
-      <Typography variant="body2" sx={{ mb: 1 }}>
+        <Typography variant="body2" sx={{ mb: 1 }}>
           Button Size
         </Typography>
-      <Select
+        <Select
           value={buttonWidth}
           onChange={(event: SelectChangeEvent<string>) =>
-            setButtonWidth(event.target.value as "small" | "medium" | "fullWidth")
+            setButtonWidth(
+              event.target.value as "small" | "medium" | "fullWidth"
+            )
           }
         >
           <MenuItem value="small">Small</MenuItem>
@@ -251,7 +254,7 @@ export default function Sidebar({
         <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
           Button Alignment
         </Typography>
-        
+
         {/* <InputLabel>Button Alignment</InputLabel> */}
         <Select
           value={buttonAlign}
@@ -283,11 +286,16 @@ export default function Sidebar({
 
   const renderFormFieldSettings = () => (
     <>
-      <Typography variant="subtitle1" gutterBottom>
-        Form Field Settings
-      </Typography>
+      <div style={{ textAlign: "center", marginTop: 30 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Form Field Settings
+        </Typography>
+      </div>
+      <Divider sx={{ my: 1 }} />
       <FormControl fullWidth margin="normal">
-        <InputLabel>Shrink Text Field</InputLabel>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Shrink Text Field
+      </Typography>
         <Select
           value={shrinkForm}
           onChange={(event: SelectChangeEvent<string>) =>
@@ -405,28 +413,32 @@ export default function Sidebar({
   return (
     <Box
       sx={{
+        borderRadius: 2,
         position: "fixed",
         left: 0,
         top: 0,
         width: 300,
-        height: "100%",
+        height: 700,
         bgcolor: "#f4f4f4",
-        p: 3,
+        mt: 15,
+        p: 4,
         borderRight: "1px solid #ddd",
+        transition: 'left 0.3s', // Smooth transition
+        zIndex: 1100,
       }}
     >
-      <div style={{ textAlign: "center", marginTop: 10 }}>
-        <Typography variant="h6" gutterBottom sx={{ paddingTop: 8 }}>
+      <div style={{ textAlign: "center" }}>
+        <Typography variant="h5" gutterBottom sx={{ paddingTop: 8 }}>
           Edit Styles
         </Typography>
-
+        <Divider sx={{ my: 2 }} />
         {!selectedField && (
-          <Typography variant="body1" gutterBottom>
+          <Typography variant="body1" gutterBottom sx={{ pt: 3 }}>
             Select a field to edit
           </Typography>
         )}
         {selectedField && (
-          <Typography variant="body1" gutterBottom>
+          <Typography variant="body2" gutterBottom>
             Editing: {selectedField}
           </Typography>
         )}
@@ -435,7 +447,8 @@ export default function Sidebar({
       {selectedFieldType === "form title" && renderFormTitleSettings()}
       {/* {selectedFieldType === "textfield" && renderTextFieldSettings()} */}
       {selectedFieldType === "button" && renderButtonSettings()}
-      {(selectedFieldType === "form" || selectedFieldType === "textfield") && renderFormFieldSettings()}
+      {(selectedFieldType === "form" || selectedFieldType === "textfield") &&
+        renderFormFieldSettings()}
       {/* <Button
         variant="contained"
         color="secondary"

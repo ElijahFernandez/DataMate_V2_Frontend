@@ -21,6 +21,7 @@ import { Height, Opacity } from "@mui/icons-material";
 import axios from "axios";
 import { FormEntity, CustomSettings } from "../api/dataTypes";
 import { Toaster, toast } from "react-hot-toast";
+import FormService from "../services/FormService";
 
 interface ProcessedFormHeaders {
   headerName: string;
@@ -128,6 +129,71 @@ const FormDetailsPrompt = ({
     definition: "",
     shrinkForm: "noShrink",
   };
+  // const handleSubmit = async () => {
+  //   if (!localFormName || !dbName) {
+  //     setErrorMessage("Please fill in all required fields");
+  //     return;
+  //   }
+
+  //   setIsProcessing(true);
+  //   startLoading();
+  //   setErrorMessage(null);
+
+  //   try {
+  //     // Convert processedHeaders to the format that worked in Postman
+  //     const headersObject =
+  //       processedHeaders?.reduce((acc, header) => {
+  //         acc[header.headerName] = header.headerValue;
+  //         return acc;
+  //       }, {} as Record<string, string>) || {};
+
+  //     const formData: FormEntity = {
+  //       dbName: dbName,
+  //       tblName: tblName,
+  //       formName: localFormName,
+  //       formType: formType,
+  //       headers: JSON.stringify(headersObject),
+  //       customSettings: JSON.stringify(defaultCustomSettings), // You can modify this as needed
+  //       userId: userId,
+  //       createdAt: new Date().toISOString(), // Use current date-time
+  //     };
+
+  //     console.log("Sending form data:", formData);
+  //     console.log("user id:", userId);
+  //     const response = await axios.post<FormEntity>(
+  //       "http://localhost:8080/postForms",
+  //       formData,
+  //       {
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+
+  //     const createdFormId = response.data.formId;
+
+  //     console.log("Form created successfully:", response.data);
+  //     setFormName(localFormName);
+  //     onClose();
+
+  //     // Navigate to the newly created form
+  //     nav(`/forms/${createdFormId}`); // Dynamic navigation based on the formId
+  //   } catch (error) {
+  //     console.error("Error creating form:", error);
+  //     if (axios.isAxiosError(error)) {
+  //       setErrorMessage(
+  //         `Failed to create form: ${
+  //           error.response?.data?.message || error.message
+  //         }`
+  //       );
+  //     } else {
+  //       setErrorMessage("An unexpected error occurred. Please try again.");
+  //     }
+  //   } finally {
+  //     setIsProcessing(false);
+  //     stopLoading();
+  //   }
+  // };
 
   const handleSubmit = async () => {
     if (!localFormName || !dbName) {
@@ -147,7 +213,7 @@ const FormDetailsPrompt = ({
           return acc;
         }, {} as Record<string, string>) || {};
 
-      const formData: FormEntity = {
+      const formData: Omit<FormEntity, 'formId'> = {
         dbName: dbName,
         tblName: tblName,
         formName: localFormName,
@@ -160,19 +226,11 @@ const FormDetailsPrompt = ({
 
       console.log("Sending form data:", formData);
       console.log("user id:", userId);
-      const response = await axios.post<FormEntity>(
-        "http://localhost:8080/postForms",
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await FormService.postForm(formData);
 
-      const createdFormId = response.data.formId;
+      const createdFormId = response.formId;
 
-      console.log("Form created successfully:", response.data);
+      console.log("Form created successfully:", response);
       setFormName(localFormName);
       onClose();
 

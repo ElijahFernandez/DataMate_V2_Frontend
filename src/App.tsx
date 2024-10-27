@@ -665,22 +665,10 @@ function App() {
                     }
                   ></Route>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
                   {/* ----------Here lies Datamate V2 Increment-------------- */}
                   {/* nested for Databases */}
-                  <Route path="generateforms">  {/* parent url | localhost:3000/databases */}
+                  
+                  {/* <Route path="generateforms">  
                     {" "}
                     <Route
                       index
@@ -701,8 +689,8 @@ function App() {
                   </Route>
 
                   {/* nested for localform */}
-                  <Route path="localforms">  {/* parent url | localhost:3000/databases */}
-                    {" "}
+                  {/* <Route path="localforms">  {/* parent url | localhost:3000/databases */}
+                    {/* {" "}
                     <Route
                       index
                       element={
@@ -719,7 +707,7 @@ function App() {
                         </PrivateRoute>
                       }
                     />
-                  </Route>
+                  </Route> */}
 
                   
                   
@@ -737,7 +725,7 @@ function App() {
                     path="/database"
                     element={<ChooseDBPage startLoading={StartLoading} stopLoading={StopLoading} />}
                   />
-                  <Route path="/generateforms" element={<ChooseDBScreen setDatabaseId={setDatabaseId} />} />
+                  {/* <Route path="/generateforms" element={<ChooseDBScreen setDatabaseId={setDatabaseId} />} /> */}
                   <Route path="/delete-profile/" element={<DeleteProfile />} />
                   <Route path="/deleted-files" element={<DeletedFiles />} />
                   <Route
@@ -751,8 +739,8 @@ function App() {
 
                   {/* GEN FORMS */}
                   {/* nested for genformspage */}
-                  <Route path="aiform"> {/* parent url | localhost:3000/aiform*/}
-                    <Route
+                  {/* <Route path="aiform"> {/* parent url | localhost:3000/aiform*/}
+                    {/* <Route
                       index
                       element={
                         <PrivateRoute>
@@ -760,10 +748,10 @@ function App() {
                         </PrivateRoute>
                       }
                     />
-                  </Route>
+                  </Route> */}
 
-                  <Route path="localform"> {/* parent url | localhost:3000/localform*/}
-                    <Route
+                  {/* <Route path="localform"> {/* parent url | localhost:3000/localform*/}
+                    {/* <Route
                       index
                       element={
                         <PrivateRoute>
@@ -771,7 +759,7 @@ function App() {
                         </PrivateRoute>
                       }
                     />
-                  </Route>
+                  </Route> */}
 
                   {/* nested for Reports */}
                   <Route path="reports">  {/* parent url | localhost:3000/reports */}
@@ -823,18 +811,6 @@ function App() {
                     />
                   </Route>
                   {/* -----------------DataMate end------------------ */}
-
-
-
-
-
-
-
-
-
-
-
-
 
                   {/* nested for Profile  */}
                   <Route path="profile">

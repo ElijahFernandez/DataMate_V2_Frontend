@@ -2,7 +2,9 @@ import axios from "axios";
 import { User } from "./dataTypes";
 
 // const USER_BASE_URL = "https://datamate-api.onrender.com/user";
-const USER_BASE_URL = "http://localhost:8080/user";
+const USER_BASE_URL = process.env.REACT_APP_API_URL 
+  ? process.env.REACT_APP_API_URL + `/user` 
+  : "http://localhost:8080/user";
 
 const config = { 
   headers: {

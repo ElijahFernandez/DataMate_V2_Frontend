@@ -55,7 +55,7 @@ export interface FormEntity {
   formName: string;
   formType: string;
   headers: string;
-  customSettings: string;
+  customSettings?: string;
   userId: number;
   createdAt: string;
 }

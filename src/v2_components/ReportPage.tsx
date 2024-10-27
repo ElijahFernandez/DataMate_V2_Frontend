@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Box, Button, Paper, CircularProgress, Modal, TextField } from "@mui/material";
 import ReactDataGrid from "@inovua/reactdatagrid-community";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const CLIENT_URL = process.env.REACT_APP_CLIENT_URL || "http://localhost:3000";
+
 // Define props interface to include startLoading and stopLoading
 interface ReportPageProps {
   startLoading: () => void;
@@ -31,6 +34,7 @@ interface HeaderConfig {
     };
   }
 
+  
 export default function ReportPage({ startLoading, stopLoading }: ReportPageProps) {
   const loc = useLocation();
   const rprtId = loc.state.rprtid;
@@ -63,7 +67,8 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
   // Function to fetch the report entity from the backend
   async function getReportEntity(rprtid: number): Promise<ReportEntity | null> {
     try {
-        const response = await axios.get(`http://localhost:8080/getReports?rprtId=${rprtid}`);
+        // const response = await axios.get(`http://localhost:8080/getReports?rprtId=${rprtid}`);
+        const response = await axios.get(`${API_URL}/getReports?rprtId=${rprtid}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching report entity:", error);
@@ -73,11 +78,14 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
 
   const handleDeleteReport = async () => {
     try {
-        const response = await axios.delete(`http://localhost:8080/deleteReport?rprtId=${reportId}`);
+        // const response = await axios.delete(`http://localhost:8080/deleteReport?rprtId=${reportId}`);
+        const response = await axios.delete(`${API_URL}/deleteReport?rprtId=${reportId}`);
         console.log("Delete Report Response:", response.data);
         handleDeleteModalClose(); // Close the modal after deletion
         alert("Report successfully deleted!");
-        window.location.href = "http://localhost:3000/reports"; 
+        // window.location.href = "http://localhost:3000/reports"; 
+        window.location.href = `${CLIENT_URL}/reports`; 
+
     } catch (error) {
       console.error("Error deleting report:", error);
     }
@@ -85,13 +93,15 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
 
   const handleRenameReport = async () => {
     try {
-      const response = await axios.put(`http://localhost:8080/rename/${reportId}`, {
+      // const response = await axios.put(`http://localhost:8080/rename/${reportId}`, {
+        const response = await axios.put(`${API_URL}/rename/${reportId}`, {
         newReportName: newName, // Pass the new report name
       });
       console.log("Rename Report Response:", response.data);
       handleRenameModalClose(); // Close the modal after renaming
       alert("Report successfully renamed!");
-      window.location.href = "http://localhost:3000/reports"; 
+      // window.location.href = "http://localhost:3000/reports"; 
+      window.location.href = `${CLIENT_URL}/reports`; 
     } catch (error) {
       console.error("Error renaming report:", error);
     }
@@ -162,7 +172,8 @@ useEffect(() => {
   if (reportId) {
     async function fetchReportData() {
       try {
-        const response = await axios.get(`http://localhost:8080/executeReportQueryById/${reportId}`);
+        // const response = await axios.get(`http://localhost:8080/executeReportQueryById/${reportId}`);
+        const response = await axios.get(`${API_URL}/executeReportQueryById/${reportId}`);
         const reportData: Array<{ [key: string]: any }> = response.data;
         console.log("Fetched Report Data:", reportData);
 
@@ -214,11 +225,6 @@ useEffect(() => {
     fetchReportData();
   }
 }, [reportId]);
-
-
-
-
-  
 
   return (
     <>

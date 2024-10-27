@@ -136,7 +136,7 @@ export default function Home({toggleImport}:HomeProps){
 
                 {/* Here lies increment DataMate_V2 */}
 
-                <div className='wrapper-title'>
+                {/* <div className='wrapper-title'>
                     <p className='import-intro'>Want to embed customized forms in your website? We can generate one just for you.</p>
                 </div>
 
@@ -169,7 +169,7 @@ export default function Home({toggleImport}:HomeProps){
                 </div>
                 <Box className='importBtn templateBtn' sx={{display: 'flex', justifyContent: 'center'}}>
                      <Button onClick={isLoggedIn ? () => nav('/generateforms') : () => nav('/login')} variant="contained">CHOOSE A DATABASE</Button>
-                </Box>
+                </Box> */}
 
 
             </section>

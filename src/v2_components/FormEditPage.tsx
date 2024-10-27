@@ -2,10 +2,11 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Toaster, toast } from "react-hot-toast";
-import Sidebar from "../components/Sidebar"; // Import the Sidebar component
-import SaveIcon from "@mui/icons-material/Save"; // Import the Edit icon
-import CustomSettingsManager from "../services/CustomSettingsService"; // Import the CustomSettingsManager and CustomSettings
+import Sidebar from "../components/Sidebar";
+import SaveIcon from "@mui/icons-material/Save";
+import CustomSettingsManager from "../services/CustomSettingsService";
 import { CustomSettings } from "../api/dataTypes";
+import FormService from '../services/FormService';
 
 import {
   Box,
@@ -17,10 +18,10 @@ import {
   IconButton,
   Modal,
   Tooltip,
+  Menu,
 } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert"; // Add this for the triple-dot icon
+import MenuIcon from "@mui/icons-material/Menu";
 import PlusIcon from "@mui/icons-material/Add"; // Add this for the plus icon
-// Define props interface to include startLoading and stopLoading
 interface FormPageProps {
   startLoading: () => void;
   stopLoading: () => void;
@@ -60,38 +61,28 @@ export default function FormEditPage({
 }: FormPageProps) {
   const loc = useLocation();
   const navigate = useNavigate();
-
-  const formIdFromLocation = loc.state?.formid || null; // Get formId from location state
   const { formId } = useParams<{ formId: string }>();
+  const formIdFromLocation = loc.state?.formid || null;
   const [formData, setFormData] = useState<FormData>({});
-  const [formEntity, setFormEntity] = useState<FormEntity | null>(null); // To store the fetched form data
-
-  const [openModal, setOpenModal] = useState(false); // State for controlling the modal visibility
+  const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
+  const [openModal, setOpenModal] = useState(false);
   const [openSaveModal, setOpenSaveModal] = useState(false);
-
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-
   const [isLoading, setIsLoading] = useState(true);
-
+  const formRef = useRef<HTMLDivElement>(null);
+  const [fieldStyles, setFieldStyles] = useState<any>({});
+  const [addingDefinition, setAddingDefinition] = useState(false);
+  const [tempDefinition, setTempDefinition] = useState("");
+  const settingsManagerRef = useRef(CustomSettingsManager);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [selectedFieldType, setSelectedFieldType] = useState<string | null>(
-    null
+    "form field"
   );
-  const formRef = useRef<HTMLDivElement>(null);
-
-  const [fieldStyles, setFieldStyles] = useState<any>({});
-
-  const [addingDefinition, setAddingDefinition] = useState(false); // State to toggle the add definition input
-  const [definition, setDefinition] = useState(""); // State to store the user's definition
-  const [tempDefinition, setTempDefinition] = useState(""); // Temporary state for input
-
-  const settingsManagerRef = useRef(CustomSettingsManager);
-
   const [customSettings, setCustomSettings] = useState<CustomSettings>({
     theme: {
-      primary: "#ECDFCC", // Example primary color
-      light: "rgba(252, 250, 238, 0.6)", // Example lighter color with opacity
+      primary: "#ECDFCC",
+      light: "rgba(252, 250, 238, 0.6)",
     },
     form_title_align: "left",
     submit_button_width: "small",
@@ -104,10 +95,10 @@ export default function FormEditPage({
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        await settingsManagerRef.current.fetchSettings(Number(formId)); // Wait for fetch to complete
+        await settingsManagerRef.current.fetchSettings(Number(formId));
         const fetchedSettings = settingsManagerRef.current.getSettings();
         setCustomSettings(fetchedSettings);
-        console.log("Fetched and updated custom settings:", fetchedSettings); // Log right after setting the state
+        console.log("Fetched and updated custom settings:", fetchedSettings);
       } catch (error) {
         console.error("Error fetching custom settings:", error);
       }
@@ -115,6 +106,7 @@ export default function FormEditPage({
 
     fetchSettings();
   }, []);
+
   // useEffect to fetch form entity
   useEffect(() => {
     const fetchFormEntity = async () => {
@@ -122,18 +114,7 @@ export default function FormEditPage({
         startLoading();
         setIsLoading(true);
         try {
-          const response = await axios.get(
-            `http://localhost:8080/getForms/${formId}`
-          );
-          const fetchedFormEntity = response.data;
-
-          // Remove quotation marks from formName if they exist
-          if (fetchedFormEntity.formName) {
-            fetchedFormEntity.formName = fetchedFormEntity.formName.replace(
-              /^"|"$/g,
-              ""
-            );
-          }
+          const fetchedFormEntity = await FormService.getFormById(formId);
           // Parse and set custom settings
           if (fetchedFormEntity.customSettings) {
             const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
@@ -171,25 +152,14 @@ export default function FormEditPage({
   // }, []);
 
   const handleAddClick = () => {
-    // setAddingDefinition(true); // Show the input field
-    // setTempDefinition(definition); // Set the initial input value to the current definition
     setAddingDefinition(true);
     setTempDefinition(customSettings.definition);
   };
 
   const handleCancelClick = () => {
-    setAddingDefinition(false); // Revert to showing the plus icon and typography
+    setAddingDefinition(false); 
   };
 
-  // const handleOkClick = () => {
-  //   setDefinition(tempDefinition); // Save the input as the new definition
-  //   setAddingDefinition(false); // Revert to showing the definition as typography
-  //   setCustomSettings({
-  //     // sets definition to customSettings for db to store
-  //     ...customSettings,
-  //     definition: tempDefinition,
-  //   });
-  // };
   const handleOkClick = () => {
     setCustomSettings({
       ...customSettings,
@@ -236,13 +206,6 @@ export default function FormEditPage({
     setOpenSaveModal(false);
   };
 
-  const handleOnClickIcon = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget); // Open menu on click
-  };
-  const handleCloseMenu = () => {
-    setAnchorEl(null); // Close menu
-  };
-
   const updateFormName = useCallback((newName: string) => {
     setFormEntity((prevEntity) => {
       if (prevEntity) {
@@ -267,6 +230,13 @@ export default function FormEditPage({
       .join(" "); // Join the words back together with spaces
   }
 
+  const handleOnClickIcon = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget); // Open menu on click
+  };
+  const handleCloseMenu = () => {
+    setAnchorEl(null); // Close menu
+  };
+
   const headers = JSON.parse(formEntity.headers);
 
   return (
@@ -276,7 +246,16 @@ export default function FormEditPage({
         minHeight: "98vh",
       }}
     >
-      <Box sx={{ maxWidth: 600, margin: "auto", pt: 15 }} ref={formRef}>
+
+      <Box
+        sx={{
+          maxWidth: 600,
+          margin: "auto",
+          pt: 15,
+          transition: "margin-left 0.3s",
+        }}
+        ref={formRef}
+      >
         <Paper
           onClick={(e) => handleFieldClick("form field", "form", e)}
           elevation={3}
@@ -431,9 +410,16 @@ export default function FormEditPage({
               type="submit"
               variant="contained"
               color="primary"
-              size={customSettings.submit_button_width === "fullWidth" ? "medium" : customSettings.submit_button_width}
+              size={
+                customSettings.submit_button_width === "fullWidth"
+                  ? "medium"
+                  : customSettings.submit_button_width
+              }
               sx={{
-                width: customSettings.submit_button_width === "fullWidth" ? "100%" : "auto",
+                width:
+                  customSettings.submit_button_width === "fullWidth"
+                    ? "100%"
+                    : "auto",
                 backgroundColor: customSettings.theme.primary,
                 "&:hover": {
                   backgroundColor: customSettings.theme.primary, // Primary color on hover
@@ -446,47 +432,6 @@ export default function FormEditPage({
             </Button>
           </Box>
         </Paper>
-
-        {/* Modals, extensions, etc. */}
-        <Modal
-          open={openModal}
-          onClose={() => setOpenModal(false)} // Close the modal on backdrop click
-        >
-          <Box sx={modalStyle}>
-            <Typography variant="h6" gutterBottom>
-              Are you sure you want to delete this form?
-            </Typography>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={async () => {
-                  try {
-                    const response = await axios.delete(
-                      `http://localhost:8080/deleteForm`,
-                      { params: { formId: formEntity?.formId } }
-                    );
-                    console.log(response.data); // Optionally log the success message
-                    setOpenModal(false); // Close modal after deletion
-                    navigate("/forms"); // Redirect to the /forms path
-                  } catch (error) {
-                    console.error("Error deleting form:", error);
-                    // You can handle the error (e.g., show a notification)
-                  }
-                }}
-                sx={{ mr: 2 }}
-              >
-                Yes
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setOpenModal(false)} // Close modal without deleting
-              >
-                No
-              </Button>
-            </Box>
-          </Box>
-        </Modal>
         {/* Sidebar for editing */}
         <Sidebar
           selectedField={selectedField}
@@ -504,7 +449,7 @@ export default function FormEditPage({
             position: "absolute",
             bottom: 50,
             right: 50,
-            bgcolor: "primary.main", // Background color (you can adjust this)
+            bgcolor: customSettings.theme.primary, // Background color (you can adjust this)
             borderRadius: "50%", // Circle shape
             p: 1, // Padding to create spacing around the icon
             cursor: "pointer", // Change cursor to pointer on hover
