@@ -18,6 +18,8 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { CustomSettings } from "../api/dataTypes";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 interface SidebarProps {
   selectedField: string | null; // Keep this for context
   selectedFieldType: string | null; 
@@ -76,7 +78,9 @@ export default function Sidebar({
   const handleFormTitleChange = async (formId: number, newFormName: string) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/updateFormName/${formId}`,
+        // `http://localhost:8080/updateFormName/${formId}`,
+        `${API_URL}/updateFormName/${formId}`,
+
         {
           method: "POST",
           headers: {
@@ -127,7 +131,9 @@ export default function Sidebar({
       if (formId) {
         try {
           const response = await axios.get(
-            `http://localhost:8080/getForms/${formId}`
+            // `http://localhost:8080/getForms/${formId}`
+            `${API_URL}/getForms/${formId}`
+
           );
           setFormEntity(response.data);
           setFormName(response.data.formName);
