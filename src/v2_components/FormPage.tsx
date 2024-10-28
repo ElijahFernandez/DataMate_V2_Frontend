@@ -122,7 +122,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   useEffect(() => {
     const fetchFormEntity = async () => {
       if (formId) {
-        startLoading();
+        // startLoading();
         setIsLoading(true);
         try {
           // const response = await axios.get(
@@ -176,7 +176,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
         } catch (error) {
           console.error("Error fetching form entity:", error);
         } finally {
-          stopLoading();
+          // stopLoading();
           setIsLoading(false);
         }
       }
