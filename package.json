@@ -65,6 +65,6 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@types/crypto-js": "^4.2.1",
     "@types/react-beautiful-dnd": "^13.1.8",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.4.5"
   }
 }

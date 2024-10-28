@@ -1,7 +1,7 @@
 import axios from "axios";
 import { CustomSettings } from "../api/dataTypes"; // Import the CustomSettings interface
 
-const API_URL = "http://localhost:8080";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 class CustomSettingsManager {
   private settings: CustomSettings;

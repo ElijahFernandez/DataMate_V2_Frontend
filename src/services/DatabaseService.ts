@@ -2,7 +2,7 @@ import axios from "axios";
 
 
 // const API_URL = 'https://datamate-api.onrender.com'
-const API_URL = "http://localhost:8080";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 class DatabaseService{
     async postDatabase(dbName:string, userid:string){
         return axios.post(`${API_URL}/postDB`,{

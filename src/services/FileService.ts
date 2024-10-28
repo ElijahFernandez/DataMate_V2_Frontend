@@ -1,5 +1,6 @@
 import axios from "axios";
-const API_URL = "http://localhost:8080";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 class FileService {
 
     //upload by user
@@ -9,7 +10,8 @@ class FileService {
         fd.append('userId', userId.toString());
       
         // return axios.post("https://datamate-api.onrender.com/upload", fd, {
-        return axios.post("http://localhost:8080/upload", fd, {
+        // return axios.post("http://localhost:8080/upload", fd, {
+            return axios.post(`${API_URL}/upload`, fd, {
             // what should be the api url for this?
           headers: {
             'Content-Type': 'multipart/form-data'
@@ -28,7 +30,8 @@ class FileService {
         let fd = new FormData();
         fd.append('file',file, filename)
         // return axios.put(`https://datamate-api.onrender.com/updateFile/${fileid}`, fd,{
-        return axios.put(`http://localhost:8080/updateFile/${fileid}`, fd,{
+        // return axios.put(`http://localhost:8080/updateFile/${fileid}`, fd,{
+            return axios.put(`${API_URL}/updateFile/${fileid}`, fd,{
         headers:{
                 'Content-Type': 'multipart/form-data'
             }
@@ -45,7 +48,8 @@ class FileService {
 
     async getFile(fileid:number) {
         // return axios.get(`https://datamate-api.onrender.com/file?id=${fileid}`
-        return axios.get(`http://localhost:8080/file?id=${fileid}`
+        // return axios.get(`http://localhost:8080/file?id=${fileid}`
+        return axios.get(`${API_URL}/file?id=${fileid}`
 
         ).then((res) => {
             if (res.data) {
@@ -58,7 +62,9 @@ class FileService {
 
     async getFiles() {
         // return axios.get('https://datamate-api.onrender.com:8080/files'
-        return axios.get('http://localhost:8080/files'
+        // return axios.get('http://localhost:8080/files'
+        return axios.get(`${API_URL}/files`
+
         ).then((res) => {
             console.log("All Files:", res.data);
             if (res.data) {
@@ -71,7 +77,7 @@ class FileService {
 
     async downloadFile(fileid:number){
         // return axios.get("https://datamate-api.onrender.com/downloadFile/" + fileid
-        return axios.get("http://localhost:8080/downloadFile/" + fileid
+        return axios.get(`${API_URL}/downloadFile/` + fileid
 
         ).then((res)=>{
             if(res.data){
@@ -84,7 +90,9 @@ class FileService {
 
     async deleteFile(fileId:number){
         // return axios.delete("https://datamate-api.onrender.com/deleteFile/" + fileId
-        return axios.delete("http://localhost:8080/deleteFile/" + fileId
+        // return axios.delete("http://localhost:8080/deleteFile/" + fileId
+        return axios.delete(`${API_URL}/deleteFile/` + fileId
+
         ).then((res) => {
             console.log(res.data);
             if (res.data) {
