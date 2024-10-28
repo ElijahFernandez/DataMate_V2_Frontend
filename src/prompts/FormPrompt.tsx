@@ -16,6 +16,8 @@ import { RootState } from "../helpers/Store";
 import { Height, Opacity } from "@mui/icons-material";
 import axios from "axios";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 type FormProps = {
   startLoading: () => void;
   headers: string[];
@@ -130,7 +132,9 @@ const FormPrompt = ({
     setIsProcessing(true);
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/headers",
+        // "http://localhost:8080/api/headers",
+        `${API_URL}/api/headers`,
+
         formHeaders
       );
 
