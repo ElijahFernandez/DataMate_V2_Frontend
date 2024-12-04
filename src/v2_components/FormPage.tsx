@@ -97,117 +97,184 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const [dates, setDates] = useState<string[]>([]);
   const [allIds, setAllIds] = useState<string[]>([]); // State to store IDs
 
-  // const [availableIds, setAvailableIds] = useState<string[]>([]);
-
-  // const fetchAvailableIds = async () => {
-  //   try {
-  //     const response = await axios.get(`http://localhost:8080/getAvailableIds?tableName=${formEntity?.tblName}`);
-  //     setAvailableIds(response.data);
-  //   } catch (error) {
-  //     console.error("Error fetching available IDs:", error);
-  //     toast.error("Failed to fetch available IDs");
-  //   }
-  // };
-
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchSettings = async () => {
-      try {
-        await settingsManagerRef.current.fetchSettings(Number(formId));
-        if (isMounted) {
-          const fetchedSettings = settingsManagerRef.current.getSettings();
-          setCustomSettings(fetchedSettings);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Error fetching custom settings:", error);
-        }
-      }
-    };
-
-    fetchSettings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [formId]); // Add formId to dependency array if it's used
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchFormEntity = async () => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+  
+    const fetchData = async () => {
       if (!formId) return;
+      
       setIsLoading(true);
+      
       try {
-        // const response = await axios.get(
-        //   `http://localhost:8080/getForms/${formId}`
-        // );
-        const fetchedFormEntity = await FormService.getFormById(formId);
-        if (isMounted) {
-          if (!fetchedFormEntity) {
-            toast.error("Form not found.");
-            return;
-          }
+        const [, fetchedFormEntity] = await Promise.all([
+          settingsManagerRef.current.fetchSettings(Number(formId)),
+          FormService.getFormById(formId)
+        ]);
+  
+        if (signal.aborted) return;
+  
+        if (fetchedFormEntity) {
+          // Destructure to simplify the code
+          const { 
+            headers, 
+            tblName, 
+            formType, 
+            formName, 
+            customSettings 
+          } = fetchedFormEntity;
+  
+          // Process form entity
           setFormEntity(fetchedFormEntity);
-          initializeFormData(fetchedFormEntity.headers);
-          setFetchedTblName(fetchedFormEntity.tblName);
-
-          console.log("Fetched Form Entity:", fetchedFormEntity);
-          // console.log("Fetched Form Table name:", response.data.tblName);
-          console.log("Fetched Form Headers: ", fetchedFormEntity.headers);
-          const headers = JSON.parse(fetchedFormEntity.headers);
-
-          const fetchedColumnNameId = Object.keys(headers).find(
-            (key) => headers[key] === "ID"
+          initializeFormData(headers);
+          setFetchedTblName(tblName);
+  
+          const parsedHeaders = JSON.parse(headers);
+          const fetchedColumnNameId = Object.keys(parsedHeaders).find(
+            (key) => parsedHeaders[key] === "ID"
           );
-          console.log("ID Key for Column: ", fetchedColumnNameId);
-
+  
           if (fetchedColumnNameId) {
             setColumnNameId(fetchedColumnNameId);
-          } else {
-            console.error("ID Key for Column not found");
           }
-
-          const fetchedColumnDate = Object.keys(headers).find(
-            (key) => headers[key] === "date"
-          );
-          console.log("ID Key for Column with date: ", fetchedColumnDate);
-
-          setIsInsert(fetchedFormEntity.formType === "Insert");
-          setIsModify(fetchedFormEntity.formType === "Modify");
-          setIsDelete(fetchedFormEntity.formType === "Delete");
-
-          // Check if FormName has any quotation marks and remove them
-          if (fetchedFormEntity.formName) {
-            fetchedFormEntity.formName = fetchedFormEntity.formName.replace(
-              /^"|"$/g,
-              ""
-            );
-          }
-          // Parse and set custom settings
-          if (fetchedFormEntity.customSettings) {
-            const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
-            setCustomSettings((prevSettings) => ({
-              ...prevSettings,
-              ...parsedSettings,
-            }));
-          }
+  
+          // Simplified form type setting
+          setIsInsert(formType === "Insert");
+          setIsModify(formType === "Modify");
+          setIsDelete(formType === "Delete");
+  
+          // Clean form name
+          const cleanedFormName = formName?.replace(/^"|"$/g, "");
+  
+          // Merge settings
+          const parsedCustomSettings = customSettings 
+            ? JSON.parse(customSettings) 
+            : {};
+          
+          const combinedSettings = {
+            ...parsedCustomSettings,
+            ...(settingsManagerRef.current.getSettings() || {})
+          };
+  
+          setCustomSettings(combinedSettings);
         }
       } catch (error) {
-        if (isMounted) {
-          console.error("Error fetching form entity:", error);
+        if (!signal.aborted) {
+          console.error("Error fetching data:", error);
           toast.error("Failed to fetch form details.");
         }
       } finally {
-        if (isMounted) {
+        if (!signal.aborted) {
           setIsLoading(false);
         }
       }
     };
-
-    fetchFormEntity();
+  
+    fetchData();
+    
+    return () => {
+      controller.abort();
+    };
   }, [formId]);
+  // useEffect(() => {
+  //   let isMounted = true;
+
+  //   const fetchSettings = async () => {
+  //     try {
+  //       await settingsManagerRef.current.fetchSettings(Number(formId));
+  //       if (isMounted) {
+  //         const fetchedSettings = settingsManagerRef.current.getSettings();
+  //         setCustomSettings(fetchedSettings);
+  //       }
+  //     } catch (error) {
+  //       if (isMounted) {
+  //         console.error("Error fetching custom settings:", error);
+  //       }
+  //     }
+  //   };
+
+  //   fetchSettings();
+
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, [formId]); // Add formId to dependency array if it's used
+
+  // useEffect(() => {
+  //   let isMounted = true;
+
+  //   const fetchFormEntity = async () => {
+  //     if (!formId) return;
+  //     setIsLoading(true);
+  //     try {
+  //       // const response = await axios.get(
+  //       //   `http://localhost:8080/getForms/${formId}`
+  //       // );
+  //       const fetchedFormEntity = await FormService.getFormById(formId);
+  //       if (isMounted) {
+  //         if (!fetchedFormEntity) {
+  //           toast.error("Form not found.");
+  //           return;
+  //         }
+  //         setFormEntity(fetchedFormEntity);
+  //         initializeFormData(fetchedFormEntity.headers);
+  //         setFetchedTblName(fetchedFormEntity.tblName);
+
+  //         console.log("Fetched Form Entity:", fetchedFormEntity);
+  //         // console.log("Fetched Form Table name:", response.data.tblName);
+  //         console.log("Fetched Form Headers: ", fetchedFormEntity.headers);
+  //         const headers = JSON.parse(fetchedFormEntity.headers);
+
+  //         const fetchedColumnNameId = Object.keys(headers).find(
+  //           (key) => headers[key] === "ID"
+  //         );
+  //         console.log("ID Key for Column: ", fetchedColumnNameId);
+
+  //         if (fetchedColumnNameId) {
+  //           setColumnNameId(fetchedColumnNameId);
+  //         } else {
+  //           console.error("ID Key for Column not found");
+  //         }
+
+  //         const fetchedColumnDate = Object.keys(headers).find(
+  //           (key) => headers[key] === "date"
+  //         );
+  //         console.log("ID Key for Column with date: ", fetchedColumnDate);
+
+  //         setIsInsert(fetchedFormEntity.formType === "Insert");
+  //         setIsModify(fetchedFormEntity.formType === "Modify");
+  //         setIsDelete(fetchedFormEntity.formType === "Delete");
+
+  //         // Check if FormName has any quotation marks and remove them
+  //         if (fetchedFormEntity.formName) {
+  //           fetchedFormEntity.formName = fetchedFormEntity.formName.replace(
+  //             /^"|"$/g,
+  //             ""
+  //           );
+  //         }
+  //         // Parse and set custom settings
+  //         if (fetchedFormEntity.customSettings) {
+  //           const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
+  //           setCustomSettings((prevSettings) => ({
+  //             ...prevSettings,
+  //             ...parsedSettings,
+  //           }));
+  //         }
+  //       }
+  //     } catch (error) {
+  //       if (isMounted) {
+  //         console.error("Error fetching form entity:", error);
+  //         toast.error("Failed to fetch form details.");
+  //       }
+  //     } finally {
+  //       if (isMounted) {
+  //         setIsLoading(false);
+  //       }
+  //     }
+  //   };
+
+  //   fetchFormEntity();
+  // }, [formId]);
 
   useEffect(() => {
     if (loc.state?.settingsSaved) {
@@ -376,9 +443,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     };
 
     try {
-      // const checkResponse = await fetch(
-      //   `http://localhost:8080/check-id?tableName=${formEntity?.tblName}&idColumn=${columnNameId}&idValue=${idValue}`
-      // );
 
       const idExists = await FormService.checkIfIdExists(
         formEntity?.tblName || "",
@@ -408,52 +472,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     }
   };
 
-  // const handleInsertSubmit = async (event: React.FormEvent) => {
-  //   event.preventDefault();
-  //   console.log("Insert form data to submit:", formData);
-
-  //   const emptyFields = Object.values(formData).some(
-  //     (value) => value.trim() === ""
-  //   );
-  //   if (emptyFields) {
-  //     toast.error("Please fill out all the fields before submitting.");
-  //     return;
-  //   }
-
-  //   const idValue = formData[columnNameId];
-
-  //   try {
-  //           // Check if ID exists
-  //           const idExists = await FormService.checkIfIdExists(
-  //               formEntity?.tblName || '',
-  //               columnNameId,
-  //               idValue
-  //           );
-
-  //           if (idExists) {
-  //               toast.error("The ID already exists. Please use a unique ID.");
-  //               // setIsSubmitting(false);
-  //               return;
-  //           }
-
-  //           // Prepare and submit form data
-  //           await FormService.insertValues({
-  //               tableName: formEntity?.tblName || '',
-  //               headers: Object.keys(formData),
-  //               values: Object.values(formData)
-  //           });
-
-  //           toast.success("Form submitted successfully!");
-  //           // Optional: Reset form or redirect
-  //           // setFormData({});
-  //       } catch (error) {
-  //           console.error("Error submitting form:", error);
-  //           toast.error("An error occurred while submitting the form.");
-  //       } finally {
-  //           // setIsSubmitting(false);
-  //       }
-  // };
-
   const handleModifySubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     console.log("Modify form data to submit:", formData);
@@ -462,12 +480,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       toast.error("Form entity is not available.");
       return;
     }
-
-    // const emptyFields = Object.values(formData).some(value => value.trim() === "");
-    // if (emptyFields) {
-    //   toast.error("Please fill out all the fields before submitting.");
-    //   return;
-    // }
 
     const headers = Object.keys(formData);
     const values = Object.values(formData);
@@ -483,10 +495,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     };
 
     try {
-      // const response = await axios.post(
-      //   "http://localhost:8080/modify",
-      //   payload
-      // );
       const response = await FormService.modifyValues({
         tableName: formEntity?.tblName || "",
         headers: Object.keys(formData),
@@ -519,8 +527,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       toast.error("Please select an ID to delete.");
       return;
     }
-
-    // Show a confirmation dialog
     if (
       window.confirm(
         `Are you sure you want to delete the record with ID ${idToDelete}?`
@@ -535,9 +541,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
 
         if (response.status === 200) {
           toast.success("Record deleted successfully!");
-          // Reset form data after successful deletion
           setFormData({});
-          // Refresh the list of available IDs
           fetchAllIds(columnNameId, fetchedTblName);
         } else {
           toast.error("Failed to delete record.");
@@ -548,42 +552,6 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
       }
     }
   };
-
-  // const handleSubmit = async (event: React.FormEvent) => {
-  //   event.preventDefault();
-  //   console.log("Form data to submit:", formData);
-
-  //   const emptyFields = Object.values(formData).some(
-  //     (value) => value.trim() === ""
-  //   );
-  //   if (emptyFields) {
-  //     toast.error("Please fill out all the fields before submitting.");
-  //     return;
-  //   }
-
-  //   const payload = {
-  //     tableName: formEntity?.tblName,
-  //     headers: Object.keys(formData),
-  //     values: Object.values(formData),
-  //   };
-
-  //   try {
-  //     const response = await fetch("http://localhost:8080/insert", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify(payload),
-  //     });
-  //     if (response.ok) {
-  //       toast.success("Form submitted successfully!");
-  //     } else {
-  //       toast.error("Failed to submit form.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error submitting form:", error);
-  //   }
-  // };
 
   const handleEditClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElEdit(event.currentTarget);

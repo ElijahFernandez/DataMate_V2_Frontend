@@ -90,7 +90,7 @@ export default function DatabasePage({
   // note: loc.state is getting the id from the prev page RIGHT HEREEE
   const [Tables, setTables] = useState<string[]>([]);
   const [tblData, setTblData] = useState<Object[]>([]);
-  const [currentTbl, setCurrentTbl] = useState(Tables[0] || ""); // Set to the first table's name if available
+  const [currentTbl, setCurrentTbl] = useState(""); // Set to the first table's name if available
   const [currentTblID, setCurrentTblID] = useState(0);
   const [userID, setUserID] = useState(0);
   const [colsData, setColsData] = useState<HeaderConfig[]>([]);
@@ -646,7 +646,7 @@ export default function DatabasePage({
         .then((res) => {
           let tblRes: TableType = res as TableType;
           setColsData(createColumns(tblRes.columns));
-
+          setCurrentTbl(tblRes.tableName);
           TableService.getTblData(Tables[currentTblID]).then((res) => {
             setTblData(createObjects(tblRes.columns, res as [][]));
           });
@@ -664,11 +664,11 @@ export default function DatabasePage({
     };
   }
 
-  useEffect(() => {
-    if (Tables.length > 0 && !currentTbl) {
-      setCurrentTbl(Tables[0]); // Sync with the first table's name
-    }
-  }, [Tables, currentTbl]);
+  // useEffect(() => {
+  //   if (Tables.length > 0 && !currentTbl) {
+  //     setCurrentTbl(Tables[0]); // Sync with the first table's name
+  //   }
+  // }, [Tables, currentTbl]);
 
   useEffect(() => {
     if (Tables.length > 0) {
@@ -683,9 +683,9 @@ export default function DatabasePage({
         });
     }
   }, [Tables]);
-  useEffect(() => {
-    console.log("current table is ", currentTbl);
-  }, [currentTbl]);
+  // useEffect(() => {
+  //   console.log("current table is ", currentTbl);
+  // }, [currentTbl]);
 
   return (
     <>
