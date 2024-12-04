@@ -90,7 +90,7 @@ export default function DatabasePage({
   // note: loc.state is getting the id from the prev page RIGHT HEREEE
   const [Tables, setTables] = useState<string[]>([]);
   const [tblData, setTblData] = useState<Object[]>([]);
-  const [currentTbl, setCurrentTbl] = useState("");
+  const [currentTbl, setCurrentTbl] = useState(Tables[0] || ""); // Set to the first table's name if available
   const [currentTblID, setCurrentTblID] = useState(0);
   const [userID, setUserID] = useState(0);
   const [colsData, setColsData] = useState<HeaderConfig[]>([]);
@@ -112,7 +112,7 @@ export default function DatabasePage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("");
-  
+
   const handleOpen = () => setFormOpen(true);
 
   const handleClose = () => {
@@ -665,6 +665,12 @@ export default function DatabasePage({
   }
 
   useEffect(() => {
+    if (Tables.length > 0 && !currentTbl) {
+      setCurrentTbl(Tables[0]); // Sync with the first table's name
+    }
+  }, [Tables, currentTbl]);
+
+  useEffect(() => {
     if (Tables.length > 0) {
       TableService.getTblData(Tables[0])
         .then((res) => {
@@ -911,13 +917,13 @@ export default function DatabasePage({
               </Box>
             </Box>
           </Box>
-          <Button
+          {/* <Button
             onClick={toggleChatbox}
             sx={{ position: "fixed", bottom: "20px", right: "20px" }}
           >
             {isChatboxOpen ? "Close Chat" : "Open Chat"}
           </Button>
-          <Chatbox isOpen={isChatboxOpen} onClose={toggleChatbox} />
+          <Chatbox isOpen={isChatboxOpen} onClose={toggleChatbox} /> */}
 
           {/*Modal for forms*/}
           <Modal

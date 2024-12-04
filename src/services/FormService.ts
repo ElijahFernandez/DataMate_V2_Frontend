@@ -202,5 +202,21 @@ class FormService {
         }
     }
 
+    async deleteForm(formId: number): Promise<string> {
+        try {
+            const response = await axios.delete(`${API_URL}/deleteForm`, {
+                params: { formId },
+            });
+            return response.data; // Return the success message from the backend
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                throw new Error(
+                    `Failed to delete form: ${error.response?.data?.message || error.message}`
+                );
+            }
+            throw new Error('An unexpected error occurred while deleting the form.');
+        }
+    }
+
 }
 export default new FormService();

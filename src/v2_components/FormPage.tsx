@@ -16,11 +16,13 @@ import {
   Popover,
   Select,
   SelectChangeEvent,
+  InputAdornment,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import CustomSettingsManager from "../services/CustomSettingsService";
 import { CustomSettings } from "../api/dataTypes";
 import FormService from "../services/FormService";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 
 interface FormPageProps {
   startLoading: () => void;
@@ -54,6 +56,9 @@ const modalStyle = {
   p: 4,
   borderRadius: 1,
 };
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 
 export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   const loc = useLocation();
@@ -105,37 +110,52 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   // };
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchSettings = async () => {
       try {
         await settingsManagerRef.current.fetchSettings(Number(formId));
-        const fetchedSettings = settingsManagerRef.current.getSettings();
-        setCustomSettings(fetchedSettings);
-        console.log("Fetched and updated custom settings:", fetchedSettings);
+        if (isMounted) {
+          const fetchedSettings = settingsManagerRef.current.getSettings();
+          setCustomSettings(fetchedSettings);
+        }
       } catch (error) {
-        console.error("Error fetching custom settings:", error);
+        if (isMounted) {
+          console.error("Error fetching custom settings:", error);
+        }
       }
     };
 
     fetchSettings();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formId]); // Add formId to dependency array if it's used
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchFormEntity = async () => {
-      if (formId) {
-        // startLoading();
-        setIsLoading(true);
-        try {
-          // const response = await axios.get(
-          //   `http://localhost:8080/getForms/${formId}`
-          // );
-          const fetchedFormEntity = await FormService.getFormById(formId);
+      if (!formId) return;
+      setIsLoading(true);
+      try {
+        // const response = await axios.get(
+        //   `http://localhost:8080/getForms/${formId}`
+        // );
+        const fetchedFormEntity = await FormService.getFormById(formId);
+        if (isMounted) {
+          if (!fetchedFormEntity) {
+            toast.error("Form not found.");
+            return;
+          }
           setFormEntity(fetchedFormEntity);
           initializeFormData(fetchedFormEntity.headers);
+          setFetchedTblName(fetchedFormEntity.tblName);
 
           console.log("Fetched Form Entity:", fetchedFormEntity);
           // console.log("Fetched Form Table name:", response.data.tblName);
           console.log("Fetched Form Headers: ", fetchedFormEntity.headers);
-          setFetchedTblName(fetchedFormEntity.tblName);
           const headers = JSON.parse(fetchedFormEntity.headers);
 
           const fetchedColumnNameId = Object.keys(headers).find(
@@ -173,17 +193,21 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
               ...parsedSettings,
             }));
           }
-        } catch (error) {
+        }
+      } catch (error) {
+        if (isMounted) {
           console.error("Error fetching form entity:", error);
-        } finally {
-          // stopLoading();
+          toast.error("Failed to fetch form details.");
+        }
+      } finally {
+        if (isMounted) {
           setIsLoading(false);
         }
       }
     };
 
     fetchFormEntity();
-  }, [formId, startLoading, stopLoading]);
+  }, [formId]);
 
   useEffect(() => {
     if (loc.state?.settingsSaved) {
@@ -196,7 +220,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
   useEffect(() => {
     // Fetch IDs if in modify mode and columnNameId is set
     if ((isModify || isDelete) && columnNameId) {
-      fetchAllIds(columnNameId, fetchedTblName); // Replace 'your_table_name' with the actual table name
+      fetchAllIds(columnNameId, fetchedTblName);
     }
   }, [isModify, columnNameId]);
 
@@ -246,23 +270,30 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     const { name, value } = event.target;
     const headerType = JSON.parse(formEntity?.headers || "{}")[name];
 
-    if (headerType === "date") {
-      // Convert from yyyy-MM-dd to MM/dd/yyyy for storage
-      const convertedValue = convertDateFormat(
-        value,
-        "yyyy-MM-dd",
-        "MM/dd/yyyy"
-      );
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: convertedValue,
-      }));
-    } else {
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-      }));
-    }
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]:
+        headerType === "date"
+          ? convertDateFormat(value, "yyyy-MM-dd", "MM/dd/yyyy")
+          : value,
+    }));
+    // if (headerType === "date") {
+    //   // Convert from yyyy-MM-dd to MM/dd/yyyy for storage
+    //   const convertedValue = convertDateFormat(
+    //     value,
+    //     "yyyy-MM-dd",
+    //     "MM/dd/yyyy"
+    //   );
+    //   setFormData((prevData) => ({
+    //     ...prevData,
+    //     [name]: convertedValue,
+    //   }));
+    // } else {
+    //   setFormData((prevData) => ({
+    //     ...prevData,
+    //     [name]: value,
+    //   }));
+    // }
   };
 
   const handleSelectChange = async (
@@ -596,9 +627,17 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
 
   const formatDate = (date: string): string => {
     const parsedDate = new Date(date);
+    console.log(parsedDate);
     const year = parsedDate.getFullYear();
+    console.log(year);
+
     const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+    console.log(month);
+
     const day = String(parsedDate.getDate()).padStart(2, "0");
+    console.log(day);
+    console.log(`${year}-${month}-${day}`);
+
     return `${year}-${month}-${day}`;
   };
 
@@ -692,9 +731,29 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
                       ? formatDate(formData[key])
                       : formData[key] || ""
                   }
-                  // value={formData[key] || ""}
                   onChange={handleInputChange}
-                  type={value as string}
+                  // type={value as string}
+                  type={value === "date" ? "date" : (value as string)}
+                  onKeyDown={(e) => {
+                    if (value === "date") {
+                      e.preventDefault(); // Prevent typing for date fields
+                    }
+                  }}
+                  helperText={
+                    value === "date"
+                      ? "Please select a date from the calendar"
+                      : ""
+                  }
+                    InputProps={{
+                    startAdornment: value === "date" && (
+                      <InputAdornment position="start">
+                      <CalendarTodayIcon />
+                      </InputAdornment>
+                    ),
+                    style: {
+                      color: value === "date" && !formData[key] ? "gray" : "inherit",
+                    },
+                    }}
                   disabled={isDelete && key !== columnNameId}
                   InputLabelProps={{
                     shrink:
@@ -710,6 +769,13 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
                         ? undefined
                         : undefined,
                   }}
+                  // InputProps={{
+                  //   startAdornment: value === "date" && (
+                  //     <InputAdornment position="start">
+                  //       <CalendarTodayIcon />
+                  //     </InputAdornment>
+                  //   ),
+                  // }}
                 />
               )
             )}
@@ -823,17 +889,14 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
                 color="secondary"
                 onClick={async () => {
                   try {
-                    const response = await axios.delete(
-                      `http://localhost:8080/deleteForm`,
-                      { params: { formId: formEntity?.formId } }
-                    );
-                    console.log(response.data);
-                    setOpenModal(false);
-                    navigate("/forms");
+                      const response = await FormService.deleteForm(formEntity?.formId);
+                      console.log(response); // Log the success message
+                      setOpenModal(false);
+                      navigate("/forms");
                   } catch (error) {
-                    console.error("Error deleting form:", error);
+                      console.error("Error deleting form:", error);
                   }
-                }}
+              }}              
                 sx={{ mr: 2 }}
               >
                 Yes

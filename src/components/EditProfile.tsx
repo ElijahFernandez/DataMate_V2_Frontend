@@ -11,6 +11,9 @@ import Topbar from './Topbar';
 import Navbar from './Navbar';
 import CryptoJS from 'crypto-js';
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
+
 export default function EditProfile() {
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
@@ -112,7 +115,8 @@ export default function EditProfile() {
             return;
         }
 
-        await axios.put(`https://datamate-api.onrender.com/user/putUser?userId=${decryptedUserId}`,{
+        // await axios.put(`https://datamate-api.onrender.com/user/putUser?userId=${decryptedUserId}`,{
+        await axios.put(`${API_URL}` + "/user/putUser?userId=${decryptedUserId}",{
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
