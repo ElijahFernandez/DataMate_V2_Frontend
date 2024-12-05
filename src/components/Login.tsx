@@ -86,7 +86,7 @@ export default function Login({startLoading, stopLoading}:
                   .then((user) => {
                     stopLoading();
                     if (user.data.length !== 0) {
-                      dispatch(loginSuccess(res.data.userId));
+                      dispatch(loginSuccess(res.data.userId, res.data.firstName, res.data.lastName, res.data.userImage));
                       console.log('success')
                       navigate('/', { replace: true });
                     } else {

@@ -2,12 +2,17 @@ import CryptoJS from 'crypto-js';
 
 const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || 'DefaultKey';
 
-export const loginSuccess = (userId: string) => {
+export const loginSuccess = (userId: string, firstName: string, lastName: string, userImage: Blob,) => {
   // encrypt userId before dispatch
   const encryptedUserId = CryptoJS.AES.encrypt(JSON.stringify(userId), ENCRYPTION_KEY).toString();
   return {
     type: 'LOGIN_SUCCESS',
-    payload: encryptedUserId,
+    payload: {
+      userId: encryptedUserId,
+      firstName,
+      lastName,
+      userImage,
+    }
   };
 };
 

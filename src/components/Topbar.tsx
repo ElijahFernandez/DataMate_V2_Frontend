@@ -38,31 +38,14 @@ const Topbar = ({ open, handleDrawerOpen }: TopbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const userId = useSelector((state: RootState) => state.auth.userId);
-  const [userImage, setUserImage] = useState<string | undefined>(undefined);
+  const userImage = useSelector((state: RootState) => state.auth.userImage);
+  const firstName = useSelector((state: RootState) => state.auth.firstName);
+  const lastName = useSelector((state: RootState) => state.auth.lastName);
   const dispatch = useDispatch();
 
   const handleProfileClick = () => {
     navigate("/profile");
   };
-
-  useEffect(() => {
-    const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || 'DefaultKey';
-    const decryptedUserId = CryptoJS.AES.decrypt(userId, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8);
-
-    if (decryptedUserId) {
-      UserService.getUserById(decryptedUserId)
-        .then(async (res) => {
-          setUserImage(res.data.userImage);
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    }
-  }, [userId, setUserImage]);
-
-  // useEffect(() => {
-  //   console.log('Profile pic:',userImage);
-  // }, [userImage]);
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
@@ -83,42 +66,6 @@ const Topbar = ({ open, handleDrawerOpen }: TopbarProps) => {
     dispatch(logout());
     navigate("/login", { replace: true });
   };
-
-  const [data, setData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    address: "",
-    username: "",
-    password: "",
-    businessName: "",
-    businessType: "",
-  });
-
-  const {
-    firstName,
-    lastName,
-    email,
-    address,
-    username,
-    password,
-    businessName,
-    businessType,
-  } = data;
-
-  useEffect(() => {
-    const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || 'DefaultKey';
-    const decryptedUserId = CryptoJS.AES.decrypt(userId, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8);
-    if (decryptedUserId) {
-      UserService.getUserById(decryptedUserId)
-        .then((response) => {
-          setData(response.data);
-        })
-        .catch((error) => {
-          console.error("Error fetching user data:", error);
-        });
-    }
-  }, [userId]);
 
   return (
     <AppBar

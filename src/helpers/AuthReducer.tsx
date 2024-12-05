@@ -3,6 +3,9 @@ const initialState = {
     isLoggedIn: false,
     userId: null,
     error: null,
+    firstName: null,
+    lastName: null,
+    userImage: null,
   };
 
 // const savedUserData = localStorage.getItem('userData');
@@ -18,7 +21,10 @@ const AuthReducer = (state = initialState, action:any) => {
       return {
         ...state,
         isLoggedIn: true,
-        userId: action.payload,
+        userId: action.payload.userId,
+        firstName: action.payload.firstName,
+        lastName: action.payload.lastName,
+        userImage: action.payload.userImage,
         error: null,
       };
     case 'LOGIN_FAILURE':

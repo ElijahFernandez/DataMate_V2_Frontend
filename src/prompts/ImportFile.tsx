@@ -38,57 +38,45 @@ const ImportFile = ({ toggleImport, startLoading, setFileId }: ImportProps) => {
   const userId = useSelector((state: RootState) => state.auth.userId);
 
   //upload under user
-  const onUpload = (file: FileList) => {
+  const onUpload = async (file: FileList) => {
     if (file && file.length) {
       if (count < file.length) {
         alert(`Only ${count} file can be uploaded at a time`);
         return;
       }
-      if (
-        !formats.some((format) =>
-          file[0].name.toLowerCase().endsWith(format.toLowerCase())
-        )
-      ) {
-        alert(
-          `Only following file formats are acceptable: ${formats.join(", ")}`
-        );
-        return;
-      } else {
+  
+      try {
+        const formatSet = new Set(formats.map((format) => format.toLowerCase()));
+        if (!formatSet.has(file[0].name.split('.').pop()?.toLowerCase() || '')) {
+          throw new Error(
+            `Only the following file formats are acceptable: ${formats.join(", ")}`
+          );
+        }
+  
         startLoading();
-
-        const ENCRYPTION_KEY =
-          process.env.REACT_APP_ENCRYPTION_KEY || "DefaultKey";
-        const decryptedUserId = CryptoJS.AES.decrypt(
+        const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || "DefaultKey";
+        const decryptedUserId = await CryptoJS.AES.decrypt(
           userId,
           ENCRYPTION_KEY
         ).toString(CryptoJS.enc.Utf8);
-        FileService.uploadFile(file[0], decryptedUserId)
-          .then((res) => {
-            console.log("Response from uploadFile:", res); // Check the API response
-            if (!res || !res.fileId) {
-              throw new Error("Invalid response structure");
-            }
-            toggleImport();
-            // nav('/file',{
-            //   state:{
-            //     fileid: res.fileId
-            //   }
-            // });
-            setFileId(res.fileId);
-            nav("/processing", {
-              state: {
-                fileid: res.fileId,
-              },
-            });
-          })
-          .catch((err) => {
-            alert("Upload Error");
-            toggleImport();
-            console.log(err);
-          });
+  
+        const res = await FileService.uploadFile(file[0], decryptedUserId);
+        console.log("Response from uploadFile:", res);
+        if (!res || !res.fileId) {
+          throw new Error("Invalid response structure");
+        }
+  
+        toggleImport();
+        setFileId(res.fileId);
+        nav("/processing", { state: { fileid: res.fileId } });
+      } catch (err) {
+        alert("Upload Error");
+        toggleImport();
+        console.log(err);
       }
     }
   };
+  
   useEffect(() => {
     drop.current?.addEventListener("dragover", handleDragOver, false);
     drop.current?.addEventListener("drop", handleLeave, false);
