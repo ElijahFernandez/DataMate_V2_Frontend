@@ -39,6 +39,8 @@ type FilePageProps = {
   stopLoading: () => void;
 };
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 export default function Filepage({ startLoading,stopLoading }: FilePageProps) {
   const loc = useLocation();
   const nav = useNavigate();
@@ -116,7 +118,7 @@ export default function Filepage({ startLoading,stopLoading }: FilePageProps) {
     startLoading();
     axios({
       // url: "https://datamate-api.onrender.com/downloadFile/" + fileId,
-      url: "http://localhost:8080/downloadFile/" + fileId,
+      url: `${API_URL}/downloadFile/` + fileId,
       method: "GET",
       responseType: "arraybuffer",
     }).then(async (response) => {

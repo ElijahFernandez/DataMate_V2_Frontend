@@ -85,14 +85,17 @@ class FormService {
     async getFormById(formId: string) {
         try {
             const response = await axios.get(`${API_URL}/getForms/${formId}`);
-            return response.data ? {
-                ...response.data,
-                formName: response.data.formName?.replace(/^"|"$/g, '')
-            } : null;
+            if (response.data) {
+                // Remove quotation marks from formName if they exist
+                if (response.data.formName) {
+                    response.data.formName = response.data.formName.replace(/^"|"$/g, "");
+                }
+                return response.data;
+            }
+            return null;
         } catch (error) {
             console.error('Error fetching form:', error);
-            // Consider adding a user-friendly error notification
-            return null;
+            throw error;
         }
     }
 
