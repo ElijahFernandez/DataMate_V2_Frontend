@@ -957,49 +957,62 @@ useEffect(()=>{
 
   //Button and SQL functions -----------------------------------------------------------------------------------------------------
   
-  function getSQLQuery(wb:XLSX.WorkBook){
-    if(sheetdata !== undefined){
-        let sql2dArr:ConvertCommand[] = [...SQLCommands];
-        let dbname = fileName.replace(/\.[^/.]+$/, "");
-        console.log("dbname val: ", dbname);
-        startLoading();
-
-        const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || 'DefaultKey';
-        const decryptedUserId = CryptoJS.AES.decrypt(userId, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8);
-
-        DatabaseService.postDatabase(dbname, decryptedUserId).then((res)=>{
-                console.log("post res:", res);
-                let dbres = res as unknown as DatabaseResponse;
-                let dbId = dbres.databaseId;
-                setDatabaseId(dbId);
-                wb.SheetNames.map((sheet, i) =>{
-                    const ws = wb.Sheets[sheet];
-                    const jsondata = XLSX.utils.sheet_to_json(ws,{
-                        header: 1,
-                        raw: false,
-                        defval: "",
-                    }) as unknown;
-                    const JSSD = sheetjs_cleanEmptyRows(jsondata as XLSX.SheetType)
-                    let sheetSD = JSON.parse(JSON.stringify(JSSD as unknown as [][]));
-                    console.log("sheet data of workbook ", sheetSD)
-                    let headers = sheetSD.shift();
-                    let dataCols = createColumns(headers);
-                    let dataSrc = createDataSrc(dataCols, sheetSD);
-                    let uniquetblName = sheet.replace(/[^a-zA-Z0-9]/g,'_') + "_" + uid();
-                    TableService.postTable(uniquetblName, dbId, decryptedUserId, headers)
-                    .then((res)=>{
-                        console.log("post table res:", res);
-                    }).catch((err)=>{
-                        console.log(err);
-                    })
-                    sql2dArr.push(generateConvertCommandObject(dataSrc as TableRow[], uniquetblName));
-                })
-                setSQLCmds(sql2dArr);
-        }).catch((err)=>{
-            console.log(err);
-        })
+  async function getSQLQuery(wb: XLSX.WorkBook) {
+    if (sheetdata !== undefined) {
+      let sql2dArr: ConvertCommand[] = [...SQLCommands];
+      const dbname = fileName.replace(/\.[^/.]+$/, "");
+      console.log("dbname val: ", dbname);
+      startLoading();
+  
+      const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || "DefaultKey";
+      const decryptedUserId = CryptoJS.AES.decrypt(userId, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8);
+  
+      try {
+        // Create Database
+        const dbResponse = await DatabaseService.postDatabase(dbname, decryptedUserId);
+        console.log("post res:", dbResponse);
+        const dbId = (dbResponse as unknown as DatabaseResponse).databaseId;
+        setDatabaseId(dbId);
+  
+        // Process all sheets in parallel
+        const sheetPromises = wb.SheetNames.map(async (sheet) => {
+          const ws = wb.Sheets[sheet];
+          const jsondata = XLSX.utils.sheet_to_json(ws, {
+            header: 1,
+            raw: false,
+            defval: "",
+          }) as unknown;
+  
+          // Clean and process sheet data
+          const JSSD = sheetjs_cleanEmptyRows(jsondata as XLSX.SheetType);
+          const sheetSD = JSON.parse(JSON.stringify(JSSD as unknown as [][]));
+          console.log("sheet data of workbook ", sheetSD);
+  
+          // Extract headers and rows
+          const headers = sheetSD.shift();
+          const dataCols = createColumns(headers);
+          const dataSrc = createDataSrc(dataCols, sheetSD);
+          const uniqueTblName = sheet.replace(/[^a-zA-Z0-9]/g, "_") + "_" + uid();
+  
+          // Post Table to Backend
+          await TableService.postTable(uniqueTblName, dbId, decryptedUserId, headers);
+          console.log(`Table posted for ${uniqueTblName}`);
+  
+          // Generate SQL Commands
+          sql2dArr.push(generateConvertCommandObject(dataSrc as TableRow[], uniqueTblName));
+        });
+  
+        // Wait for all sheet processing to complete
+        await Promise.all(sheetPromises);
+  
+        // Update SQL Commands state
+        setSQLCmds(sql2dArr);
+      } catch (error) {
+        console.error("Error in getSQLQuery:", error);
+      }
     }
   }
+  
 
   function nextFunc(){
     if(normWB === undefined || normWB === null){
@@ -1033,10 +1046,10 @@ useEffect(()=>{
           <p style={{fontSize:"32px", padding:0, margin:0}}>DataMate has detected that your table can be normalized for easier transition to database.</p>
           <p style={{fontSize:"16px", paddingTop:'1em', paddingLeft:0, paddingBottom:'1em', margin:0}}>Will you accept this suggestions?</p>
           <div style={{display:'flex', flexDirection:'row'}}>
-            <div style={{width: '85%'}}>
+            <div style={{width: '85%', overflow: 'auto'}}>
             {HeaderArr !== undefined && BodyArr !== undefined? <>
                           <Paper elevation={0} sx={{ height:vsheets.length > 3? {TableHeight}:150, overflow: 'auto', border:"5px solid #71C887", borderRadius: 0}}>
-                          <TableContainer>
+                          <TableContainer style={{maxHeight: '40vh', overflowY: 'auto'}}>
                               <Table stickyHeader aria-label="sticky table">
                               <TableHead >
                                   <tr>
@@ -1071,21 +1084,13 @@ useEffect(()=>{
                               </TableBody>
                               </Table>
                           </TableContainer>
-                          {/* <TablePagination
-                              rowsPerPageOptions={[10, 25, 100]}
-                              component="div"
-                              count={BodyArr.length}
-                              rowsPerPage={rowsPerPage}
-                              page={page}
-                              onPageChange={handleChangePage}
-                              onRowsPerPageChange={handleChangeRowsPerPage}
-                          /> */}
+
                               </Paper>     
               </>:
               <><CircularProgress size="10rem" 
               color="success" /></>}
             </div>
-            <div style={{width: '20%'}}>
+            <div style={{width: '20%', margin: '10px'}}>
               {/* for table tabs */}
               <div style={{display:"flex", flexDirection:"row", justifyContent:"space-between"}}>
                   <Tabs

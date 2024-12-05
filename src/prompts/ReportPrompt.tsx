@@ -148,7 +148,7 @@ const ReportPrompt = ({ toggleImport, startLoading, headers, onClose, databaseNa
       // Prompt success message and redirect
       alert("Report saved successfully!");
       // window.location.href = "http://localhost:3000"; // Redirect to base URL
-      window.location.href = `${CLIENT_URL}`; // Redirect to base page
+      window.location.href = "/"; // Redirect to base page
     } catch (error) {
       console.error("Error saving SQL to database:", error);
       // Prompt error message

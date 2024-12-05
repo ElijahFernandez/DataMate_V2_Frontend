@@ -167,7 +167,7 @@ export default function DatabasePage({
     setShowDetailsForm(true);
 
     // setShowDetailsForm(true);
-    console.log("Show details form" + showDetailsForm);
+    // console.log("Show details form" + showDetailsForm);
   };
 
   // Function to convert formHeaders to JSON format
@@ -205,7 +205,7 @@ export default function DatabasePage({
     keys: string[],
     arrayOfArrays: (number | string | Date | boolean)[][]
   ): Object[] {
-    console.log("received array of arrays", arrayOfArrays);
+    // console.log("received array of arrays", arrayOfArrays);
     if (keys.length === 0 || arrayOfArrays.length === 0) {
       return [];
     }
@@ -223,10 +223,10 @@ export default function DatabasePage({
           arr[index].toString().length > 9 &&
           isValidDate(arr[index] as string)
         ) {
-          console.log("arr[index] is ", arr[index]);
+          // console.log("arr[index] is ", arr[index]);
           let dateVar = new Date(arr[index] as string);
           obj[key] = dateVar.toISOString().slice(0, 10).replace("T", " ");
-          console.log("here:", obj[key]);
+          // console.log("here:", obj[key]);
         } else {
           obj[key] = arr[index];
         }
@@ -241,7 +241,7 @@ export default function DatabasePage({
   }
 
   function getColumnType(value: string | number | boolean | Date): string {
-    console.log("Type of ", value, " is ", typeof value);
+    // console.log("Type of ", value, " is ", typeof value);
     if (typeof value === "string") {
       if (isValidDate(value)) {
         return "DATE";
@@ -492,7 +492,7 @@ export default function DatabasePage({
     let SQLcolumns: string[] = Object.keys(jsonData[0]).map((key) =>
       key.replace(/[^a-zA-Z0-9]/g, "_")
     );
-    console.log("join: ", SQLcolumns.join(", "));
+    // console.log("join: ", SQLcolumns.join(", "));
     const valsQuery = `(${SQLcolumns.join(", ")}) VALUES ${insertValues};`;
     return returnStr + " " + valsQuery;
   }
@@ -512,7 +512,7 @@ export default function DatabasePage({
           let tblRes = res as TableType;
           iniColumns[tbl] = tblRes.columns;
           tblNames[tbl] = tblRes.tableName;
-          console.log("iniColumns arr:", iniColumns);
+          // console.log("iniColumns arr:", iniColumns);
           TableService.getTblData(Tables[tbl])
             .then((res) => {
               tempArr.push({
@@ -520,7 +520,7 @@ export default function DatabasePage({
                 data: createObjects(iniColumns[tbl], res as [][]),
               });
               if (tempArr.length == Tables.length) {
-                console.log("compiling complete...", tempArr);
+                // console.log("compiling complete...", tempArr);
                 stopLoading();
                 setDBObj(tempArr);
                 setDLWindow(true);
@@ -539,7 +539,7 @@ export default function DatabasePage({
   useEffect(() => {
     if (DBObj.length === Tables.length && downloadWindow) {
       //for create
-      console.log("str before ", sqlStr);
+      // console.log("str before ", sqlStr);
       DBObj.map((tbl) => {
         sqlStr += getCreateQuery(tbl.data as TableRow[], tbl.tblName) + "\n";
       });
@@ -582,7 +582,7 @@ export default function DatabasePage({
     //if(dbId !== undefined){
     TableService.getTblByDB(dbId)
       .then((res) => {
-        console.log("get res:", res);
+        // console.log("get res:", res);
         let tblResponse = res as TableType[];
         let tableArr = [...Tables];
         setDBName(tblResponse[0].database.databaseName);
@@ -600,7 +600,7 @@ export default function DatabasePage({
         if (Tables[0] !== undefined) {
           TableService.getTblData(Tables[0])
             .then((res) => {
-              console.log("get tbl data res:", res);
+              // console.log("get tbl data res:", res);
               setTblData(createObjects(tblResponse[0].columns, res as [][]));
             })
             .catch((err) => {
@@ -624,30 +624,53 @@ export default function DatabasePage({
   };
 
   const handleChooseForm = () => {
-    console.log("Choose Forms");
+    // console.log("Choose Forms");
     // should load the modal
     handleOpen();
   };
 
   const handleOpenReport = () => {
-    console.log("Report modal should open");
+    // console.log("Report modal should open");
     // should load the modal
     handleReportOpen();
   };
 
   const toggleImport = () => {
     // Implement this function if needed, or pass an empty function
-    console.log("Toggle import");
+    // console.log("Toggle import");
   };
 
-  useEffect(() => {
-    if (Tables[currentTblID] !== undefined || Tables[currentTblID] !== null) {
-      TableService.getTblByName(Tables[currentTblID])
+  const [cachedTables, setCachedTables] = useState<{ [key: string]: TableType }>({});
+
+useEffect(() => {
+  const tableName = Tables[currentTblID];
+  
+  if (tableName !== undefined && tableName !== null) {
+    // Check if the data is already cached
+    if (cachedTables[tableName]) {
+      console.log("TABLE IS ALREADY CACHED, RETRIEVING FROM CACHE");
+      const tblRes = cachedTables[tableName];
+      setColsData(createColumns(tblRes.columns));
+      setCurrentTbl(tblRes.tableName);
+      TableService.getTblData(tableName).then((res) => {
+        setTblData(createObjects(tblRes.columns, res as [][]));
+      });
+    } else {
+      // If not cached, fetch it and store it in cache
+      console.log("FIRST TIME RETRIEVAL, RETRIEVE FROM BACKEND");
+      TableService.getTblByName(tableName)
         .then((res) => {
           let tblRes: TableType = res as TableType;
           setColsData(createColumns(tblRes.columns));
           setCurrentTbl(tblRes.tableName);
-          TableService.getTblData(Tables[currentTblID]).then((res) => {
+          
+          // Cache the fetched table data
+          setCachedTables((prevCache) => ({
+            ...prevCache,
+            [tableName]: tblRes,
+          }));
+
+          TableService.getTblData(tableName).then((res) => {
             setTblData(createObjects(tblRes.columns, res as [][]));
           });
         })
@@ -655,7 +678,9 @@ export default function DatabasePage({
           console.log(err);
         });
     }
-  }, [currentTbl]);
+  }
+}, [currentTbl, Tables, cachedTables]);
+
 
   function getTabProps(index: number) {
     return {
@@ -674,7 +699,7 @@ export default function DatabasePage({
     if (Tables.length > 0) {
       TableService.getTblData(Tables[0])
         .then((res) => {
-          console.log("get tbl data res:", res);
+          // console.log("get tbl data res:", res);
           setTblData(createObjects(FirstColumns, res as [][]));
           stopLoading();
         })

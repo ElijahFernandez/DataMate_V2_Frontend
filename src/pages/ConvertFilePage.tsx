@@ -573,41 +573,47 @@ function hasCorrespondingValue(table: (string | number)[][], columnName1: string
         }
     }
 
-    function getSQLQuery(){
-        if(dataCols !== undefined && sheetData !== undefined){
-            let sql2dArr:ConvertCommand[] = [...SQLCommands];
-            let dbname = fileName.replace(/\.[^/.]+$/, "");
-            console.log("dbname val: ", dbname);
-            startLoading();
-
-            const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || 'DefaultKey';
-            const decryptedUserId = CryptoJS.AES.decrypt(userId, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8);
-
-            DatabaseService.postDatabase(dbname, decryptedUserId).then((res)=>{
-                    console.log("post res:", res);
-                    let dbres = res as unknown as DatabaseResponse;
-                    let dbId = dbres.databaseId;
-                    setDatabaseId(dbId);
-                    visibleSheetNames.map((sheet, i) =>{
-                        let sheetSD = JSON.parse(JSON.stringify(sheetData[sheet as keyof typeof sheetData] as unknown as [][]));
-                        let headers = sheetSD.shift();
-                        let dataCols = createColumns(headers);
-                        let dataSrc = createDataSrc(dataCols, sheetSD);
-                        let uniquetblName = sheet.replace(/[^a-zA-Z0-9]/g,'_') + "_" + uid();
-                        TableService.postTable(uniquetblName, dbId, decryptedUserId, headers)
-                        .then((res)=>{
-                            console.log("post table res:", res);
-                        }).catch((err)=>{
-                            console.log(err);
-                        })
-                        sql2dArr.push(generateConvertCommandObject(dataSrc as TableRow[], uniquetblName));
-                    })
-                    setSQLCmds(sql2dArr);
-            }).catch((err)=>{
-                console.log(err);
-            });
+    async function getSQLQuery() {
+      if (dataCols !== undefined && sheetData !== undefined) {
+        let sql2dArr: ConvertCommand[] = [...SQLCommands];
+        let dbname = fileName.replace(/\.[^/.]+$/, "");
+        console.log("dbname val: ", dbname);
+        startLoading();
+    
+        const ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || "DefaultKey";
+        const decryptedUserId = CryptoJS.AES.decrypt(userId, ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8);
+    
+        try {
+          const dbResponse = await DatabaseService.postDatabase(dbname, decryptedUserId);
+          console.log("post res:", dbResponse);
+    
+          const dbId = (dbResponse as unknown as DatabaseResponse).databaseId;
+          setDatabaseId(dbId);
+    
+          // Parallelizing table creation and SQL command generation
+          const promises = visibleSheetNames.map(async (sheet) => {
+            let sheetSD = JSON.parse(JSON.stringify(sheetData[sheet as keyof typeof sheetData] as unknown as [][]));
+            let headers = sheetSD.shift();
+            let dataCols = createColumns(headers);
+            let dataSrc = createDataSrc(dataCols, sheetSD);
+            let uniqueTblName = sheet.replace(/[^a-zA-Z0-9]/g, "_") + "_" + uid();
+    
+            // Post table and generate SQL commands in parallel
+            await TableService.postTable(uniqueTblName, dbId, decryptedUserId, headers);
+            console.log(`Table posted for ${uniqueTblName}`);
+    
+            // Generate SQL command
+            sql2dArr.push(generateConvertCommandObject(dataSrc as TableRow[], uniqueTblName));
+          });
+    
+          await Promise.all(promises);
+          setSQLCmds(sql2dArr);
+        } catch (error) {
+          console.error("Error during SQL query generation:", error);
+        }
       }
     }
+    
     // using SQLizer API
     // if(workbook !== undefined && workbook !== null){
     //     let type = getFileType(fileName);
