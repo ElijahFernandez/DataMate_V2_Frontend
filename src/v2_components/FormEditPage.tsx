@@ -90,52 +90,119 @@ export default function FormEditPage({
     definition: "",
     shrinkForm: "false",
   });
-
-  // useEffect to fetch custom settings and is stored to customSettings
   useEffect(() => {
-    const fetchSettings = async () => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+  
+    const fetchData = async () => {
+      if (!formId) return;
+      
+      setIsLoading(true);
+      
       try {
-        await settingsManagerRef.current.fetchSettings(Number(formId));
-        const fetchedSettings = settingsManagerRef.current.getSettings();
-        setCustomSettings(fetchedSettings);
-        console.log("Fetched and updated custom settings:", fetchedSettings);
-      } catch (error) {
-        console.error("Error fetching custom settings:", error);
-      }
-    };
-
-    fetchSettings();
-  }, []);
-
-  // useEffect to fetch form entity
-  useEffect(() => {
-    const fetchFormEntity = async () => {
-      if (formId) {
-        startLoading();
-        setIsLoading(true);
-        try {
-          const fetchedFormEntity = await FormService.getFormById(formId);
-          // Parse and set custom settings
-          if (fetchedFormEntity.customSettings) {
-            const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
-            setCustomSettings((prevSettings) => ({
-              ...prevSettings,
-              ...parsedSettings,
-            }));
-          }
+        const [, fetchedFormEntity] = await Promise.all([
+          settingsManagerRef.current.fetchSettings(Number(formId)),
+          FormService.getFormById(formId)
+        ]);
+  
+        if (signal.aborted) return;
+  
+        if (fetchedFormEntity) {
+          // Destructure to simplify the code
+          const { 
+            headers, 
+            tblName, 
+            formType, 
+            formName, 
+            customSettings 
+          } = fetchedFormEntity;
+  
+          // Process form entity
           setFormEntity(fetchedFormEntity);
-          // console.log("Fetched Form Entity:", formResponse.data);
-        } catch (error) {
-          console.error("Error fetching form entity or settings:", error);
-        } finally {
-          stopLoading();
+  
+          const parsedHeaders = JSON.parse(headers);
+          const fetchedColumnNameId = Object.keys(parsedHeaders).find(
+            (key) => parsedHeaders[key] === "ID"
+          );
+  
+          // Clean form name
+          const cleanedFormName = formName?.replace(/^"|"$/g, "");
+  
+          // Merge settings
+          const parsedCustomSettings = customSettings 
+            ? JSON.parse(customSettings) 
+            : {};
+          
+          const combinedSettings = {
+            ...parsedCustomSettings,
+            ...(settingsManagerRef.current.getSettings() || {})
+          };
+  
+          setCustomSettings(combinedSettings);
+        }
+      } catch (error) {
+        if (!signal.aborted) {
+          console.error("Error fetching data:", error);
+          toast.error("Failed to fetch form details.");
+        }
+      } finally {
+        if (!signal.aborted) {
           setIsLoading(false);
         }
       }
     };
+  
+    fetchData();
+    
+    return () => {
+      controller.abort();
+    };
+  }, [formId]);
+  // useEffect to fetch custom settings and is stored to customSettings
+  // useEffect(() => {
+  //   const fetchSettings = async () => {
+  //     try {
+  //       await settingsManagerRef.current.fetchSettings(Number(formId));
+  //       const fetchedSettings = settingsManagerRef.current.getSettings();
+  //       setCustomSettings(fetchedSettings);
+  //       console.log("Fetched and updated custom settings:", fetchedSettings);
+  //     } catch (error) {
+  //       console.error("Error fetching custom settings:", error);
+  //     }
+  //   };
 
-    fetchFormEntity();
-  }, [formId, startLoading, stopLoading]);
+  //   fetchSettings();
+  // }, []);
+
+  // // useEffect to fetch form entity
+  // useEffect(() => {
+  //   const fetchFormEntity = async () => {
+  //     if (formId) {
+  //       startLoading();
+  //       setIsLoading(true);
+  //       try {
+  //         const fetchedFormEntity = await FormService.getFormById(formId);
+  //         // Parse and set custom settings
+  //         if (fetchedFormEntity.customSettings) {
+  //           const parsedSettings = JSON.parse(fetchedFormEntity.customSettings);
+  //           setCustomSettings((prevSettings) => ({
+  //             ...prevSettings,
+  //             ...parsedSettings,
+  //           }));
+  //         }
+  //         setFormEntity(fetchedFormEntity);
+  //         // console.log("Fetched Form Entity:", formResponse.data);
+  //       } catch (error) {
+  //         console.error("Error fetching form entity or settings:", error);
+  //       } finally {
+  //         stopLoading();
+  //         setIsLoading(false);
+  //       }
+  //     }
+  //   };
+
+  //   fetchFormEntity();
+  // }, [formId, startLoading, stopLoading]);
 
   // useEffect to handle clicks outside of form
   // useEffect(() => {
