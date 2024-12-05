@@ -13,11 +13,12 @@ import {
   SelectChangeEvent,
   Grid,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { CustomSettings } from "../api/dataTypes";
-
+import FormService from "../services/FormService";
+import { useDebounce } from "use-debounce";
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 interface SidebarProps {
@@ -51,6 +52,7 @@ export default function Sidebar({
   updateFormName, // Add this new prop
 }: SidebarProps) {
   const { formId } = useParams<{ formId: string }>();
+  const [debouncedFormId] = useDebounce(formId, 300); // Debounce to avoid rapid fetch calls
   const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [buttonWidth, setButtonWidth] = useState<
@@ -68,40 +70,68 @@ export default function Sidebar({
     "center" | "left" | "right"
   >("left");
 
-  const [formName, setFormName] = useState(
-    formEntity ? formEntity.formName : ""
-  );
+  // const [formName, setFormName] = useState(
+  //   formEntity ? formEntity.formName : ""
+  // );
+  const [formName, setFormName] = useState(""); // Lazy state initialization for better performance
+
+
+  const formEntityCache = useRef<Record<string, FormEntity>>({}); // Cache to avoid redundant fetches
+
   useEffect(() => {
     console.log("Selected Field Type:", selectedFieldType);
   }, [selectedFieldType]);
 
-  const handleFormTitleChange = async (formId: number, newFormName: string) => {
-    try {
-      const response = await fetch(
-        // `http://localhost:8080/updateFormName/${formId}`,
-        `${API_URL}/updateFormName/${formId}`,
+  const handleFormTitleChange = async (newFormName: string) => {
+    if (!formEntity) return;
 
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: newFormName,
-        }
-      );
+    try {
+      const response = await fetch(`${API_URL}/updateFormName/${formEntity.formId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ formName: newFormName }),
+      });
 
       if (response.ok) {
-        const result = await response.text();
-        console.log(result); // Log success message
-        updateFormName(newFormName); // Update the form name in the parent component
+        updateFormName(newFormName); // Update form name in parent component
+        console.log("Form name updated successfully");
       } else {
         const error = await response.text();
-        console.error("Error:", error);
+        console.error("Error updating form name:", error);
       }
     } catch (error) {
-      console.error("Error updating form name:", error);
+      console.error("Error:", error);
     }
   };
+  // const handleFormTitleChange = async (formId: number, newFormName: string) => {
+  //   try {
+  //     const response = await fetch(
+  //       // `http://localhost:8080/updateFormName/${formId}`,
+  //       `${API_URL}/updateFormName/${formId}`,
+
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: newFormName,
+  //       }
+  //     );
+
+  //     if (response.ok) {
+  //       const result = await response.text();
+  //       console.log(result); // Log success message
+  //       updateFormName(newFormName); // Update the form name in the parent component
+  //     } else {
+  //       const error = await response.text();
+  //       console.error("Error:", error);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating form name:", error);
+  //   }
+  // };
 
   const handleFormTitleApply = () => {
     setCustomSettings({
@@ -109,7 +139,9 @@ export default function Sidebar({
       form_title_align: formTitleAlign,
     });
     if (formEntity && formEntity.formId) {
-      handleFormTitleChange(formEntity.formId, formName);
+      // handleFormTitleChange(formEntity.formId, formName);
+      handleFormTitleChange(formName);
+
       console.log("New form name: ", formName);
     } else {
       console.error("Form ID not found");
@@ -125,29 +157,64 @@ export default function Sidebar({
       },
     });
   };
+  const fetchFormEntity = useCallback(async () => {
+    if (!debouncedFormId || formEntityCache.current[debouncedFormId]) return;
 
-  useEffect(() => {
-    const fetchFormEntity = async () => {
-      if (formId) {
-        try {
-          const response = await axios.get(
-            // `http://localhost:8080/getForms/${formId}`
-            `${API_URL}/getForms/${formId}`
-
-          );
-          setFormEntity(response.data);
-          setFormName(response.data.formName);
-          setFormTitleAlign(customSettings.form_title_align || "left");
-          // console.log("Fetched Form Entity:", response.data);
-          // console.log("Fetched Form Table name:", response.data.tblName);
-        } catch (error) {
-          console.error("Error fetching form entity:", error);
-        }
+    try {
+      startLoading(); // Start loading indicator
+      const response = await FormService.getFormById(debouncedFormId); // Your async fetch function
+      if (response) {
+        formEntityCache.current[debouncedFormId] = response; // Cache response
+        setFormEntity(response);
+        setFormName(response.formName);
+        setFormTitleAlign(customSettings.form_title_align || "left");
       }
-    };
+    } catch (error) {
+      console.error("Error fetching form entity:", error);
+    } finally {
+      stopLoading(); // Stop loading indicator
+    }
+  }, [debouncedFormId, customSettings.form_title_align, startLoading, stopLoading]);
 
-    fetchFormEntity();
-  }, [formId, customSettings.form_title_align]);
+
+    // Fetch data when dependencies change
+    useEffect(() => {
+      if (debouncedFormId) {
+        fetchFormEntity(); // Only fetch if the formId exists and is stable
+      }
+    }, [debouncedFormId, fetchFormEntity]);
+
+  // useEffect(() => {
+  //   const fetchFormEntity = async () => {
+  //     if (formId) {
+  //       startLoading(); // Optional: indicate loading state
+  
+  //       // Check cache first
+  //       if (formEntityCache.current[formId]) {
+  //         setFormEntity(formEntityCache.current[formId]);
+  //         setFormName(formEntityCache.current[formId].formName);
+  //         stopLoading(); // Stop loading if found in cache
+  //         return;
+  //       }
+  
+  //       try {
+  //         const response = await FormService.getFormById(formId); // Use your provided async function
+  //         if (response) {
+  //           formEntityCache.current[formId] = response; // Cache the response
+  //           setFormEntity(response);
+  //           setFormName(response.formName);
+  //           setFormTitleAlign(customSettings.form_title_align || "left");
+  //         }
+  //       } catch (error) {
+  //         console.error("Error fetching form entity:", error);
+  //       } finally {
+  //         stopLoading(); // End loading state
+  //       }
+  //     }
+  //   };
+  
+  //   fetchFormEntity();
+  // }, [formId, customSettings.form_title_align]); // Adjust dependencies to prevent unnecessary re-fetches
 
   useEffect(() => {
     console.log("Retrieved custom settings:", customSettings);

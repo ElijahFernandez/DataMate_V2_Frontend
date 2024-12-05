@@ -84,7 +84,7 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
         handleDeleteModalClose(); // Close the modal after deletion
         alert("Report successfully deleted!");
         // window.location.href = "http://localhost:3000/reports"; 
-        window.location.href = `${CLIENT_URL}/reports`; 
+        window.location.href = `/reports`; 
 
     } catch (error) {
       console.error("Error deleting report:", error);
@@ -101,7 +101,7 @@ export default function ReportPage({ startLoading, stopLoading }: ReportPageProp
       handleRenameModalClose(); // Close the modal after renaming
       alert("Report successfully renamed!");
       // window.location.href = "http://localhost:3000/reports"; 
-      window.location.href = `${CLIENT_URL}/reports`; 
+      window.location.href = `/reports`; 
     } catch (error) {
       console.error("Error renaming report:", error);
     }

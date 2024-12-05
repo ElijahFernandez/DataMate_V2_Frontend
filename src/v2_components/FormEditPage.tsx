@@ -490,15 +490,6 @@ export default function FormEditPage({
             </Box>
           </Box>
         </Modal>
-        <IconButton
-          onClick={() => console.log(customSettings)}
-          sx={{
-            color: "black", // Icon color
-            ml: 2, // Margin left to separate from the save icon
-          }}
-        >
-          <PlusIcon sx={{ fontSize: 30 }} />
-        </IconButton>
       </Box>
     </Box>
   );
