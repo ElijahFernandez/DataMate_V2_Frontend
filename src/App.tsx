@@ -62,10 +62,6 @@ import ResetPassword from "./components/ResetPassword";
 
 // Here lies DataMate V2's increment // 
 
-import ChooseDBPage from "./v2_components/ChooseDBPage";
-import ChooseDBScreen from "./v2_components/ChooseDBScreen";
-import GenerateForm from "./v2_components/GenerateFormPage";
-import LocalForm from "./v2_components/LocalForm";
 import ReportScreen from "./v2_components/ReportScreen";
 import ReportPage from "./v2_components/ReportPage";
 import FormScreen from "./v2_components/FormScreen";
@@ -723,7 +719,6 @@ function App() {
                   />
                   <Route
                     path="/database"
-                    element={<ChooseDBPage startLoading={StartLoading} stopLoading={StopLoading} />}
                   />
                   {/* <Route path="/generateforms" element={<ChooseDBScreen setDatabaseId={setDatabaseId} />} /> */}
                   <Route path="/delete-profile/" element={<DeleteProfile />} />
