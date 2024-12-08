@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import trashBinImage from "../images/Trashbin.png";
-import axios from "axios";
 import {
   Button,
   MenuItem,
@@ -691,7 +689,11 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                         open={open3}
                         onClose={handleCloseMenu}
                       >
-                        <MenuItem onClick={async () => {}}>Edit</MenuItem>
+                        <MenuItem onClick={() => {
+                          if(form.formId !== undefined) {
+                            nav(`/forms/${form.formId}/edit`);
+                          }
+                        }}>Edit</MenuItem>
                         <MenuItem
                           onClick={() => {
                             setOpenModal(true);
@@ -796,10 +798,12 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                       </div>
                     </div>
                   </Grid>
+
                   <Modal
                     open={openModal}
                     onClose={() => setOpenModal(false)} // Close the modal on backdrop click
                   >
+                    {/* Modal for deletion */}
                     <Box sx={modalStyle}>
                       <Typography variant="h6" gutterBottom>
                         Are you sure you want to delete this form?
@@ -811,16 +815,21 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                           mt: 2,
                         }}
                       >
+                        {/* Yes from Modal */}
                         <Button
                           variant="contained"
                           color="secondary"
                           onClick={async () => {
                             try {
-                              const response = await axios.delete(
-                                `http://localhost:8080/deleteForm`,
-                                { params: { formId: form.formId } }
-                              );
-                              console.log(response.data); // Optionally log the success message
+                              if (form.formId !== undefined) {
+                                const response: string =
+                                  await FormService.deleteForm(form.formId);
+                                console.log(response); // Log the success message from the backend
+                                setOpenModal(false); // Close modal after deletion
+                                window.location.reload(); // Refresh the page
+                              } else {
+                                console.error("Form ID is undefined");
+                              }
                               setOpenModal(false); // Close modal after deletion
                               window.location.reload(); // Refresh the page
                             } catch (error) {
@@ -832,6 +841,7 @@ const FormList: React.FC<FormListProp> = ({ setFormId }: FormListProp) => {
                         >
                           Yes
                         </Button>
+                        {/* No from Modal */}
                         <Button
                           variant="outlined"
                           onClick={() => setOpenModal(false)} // Close modal without deleting

@@ -19,11 +19,14 @@ import axios from "axios";
 import { CustomSettings } from "../api/dataTypes";
 import FormService from "../services/FormService";
 import { useDebounce } from "use-debounce";
+import { IconButton } from "@mui/material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight"; // Import ChevronRightIcon
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 interface SidebarProps {
   selectedField: string | null; // Keep this for context
-  selectedFieldType: string | null; 
+  selectedFieldType: string | null;
   customSettings: CustomSettings;
   startLoading: () => void;
   stopLoading: () => void;
@@ -55,6 +58,7 @@ export default function Sidebar({
   const [debouncedFormId] = useDebounce(formId, 300); // Debounce to avoid rapid fetch calls
   const [formEntity, setFormEntity] = useState<FormEntity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [buttonWidth, setButtonWidth] = useState<
     "small" | "medium" | "fullWidth"
   >("small");
@@ -75,7 +79,6 @@ export default function Sidebar({
   // );
   const [formName, setFormName] = useState(""); // Lazy state initialization for better performance
 
-
   const formEntityCache = useRef<Record<string, FormEntity>>({}); // Cache to avoid redundant fetches
 
   useEffect(() => {
@@ -86,13 +89,16 @@ export default function Sidebar({
     if (!formEntity) return;
 
     try {
-      const response = await fetch(`${API_URL}/updateFormName/${formEntity.formId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ formName: newFormName }),
-      });
+      const response = await fetch(
+        `${API_URL}/updateFormName/${formEntity.formId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ formName: newFormName }),
+        }
+      );
 
       if (response.ok) {
         updateFormName(newFormName); // Update form name in parent component
@@ -174,21 +180,25 @@ export default function Sidebar({
     } finally {
       stopLoading(); // Stop loading indicator
     }
-  }, [debouncedFormId, customSettings.form_title_align, startLoading, stopLoading]);
+  }, [
+    debouncedFormId,
+    customSettings.form_title_align,
+    startLoading,
+    stopLoading,
+  ]);
 
-
-    // Fetch data when dependencies change
-    useEffect(() => {
-      if (debouncedFormId) {
-        fetchFormEntity(); // Only fetch if the formId exists and is stable
-      }
-    }, [debouncedFormId, fetchFormEntity]);
+  // Fetch data when dependencies change
+  useEffect(() => {
+    if (debouncedFormId) {
+      fetchFormEntity(); // Only fetch if the formId exists and is stable
+    }
+  }, [debouncedFormId, fetchFormEntity]);
 
   // useEffect(() => {
   //   const fetchFormEntity = async () => {
   //     if (formId) {
   //       startLoading(); // Optional: indicate loading state
-  
+
   //       // Check cache first
   //       if (formEntityCache.current[formId]) {
   //         setFormEntity(formEntityCache.current[formId]);
@@ -196,7 +206,7 @@ export default function Sidebar({
   //         stopLoading(); // Stop loading if found in cache
   //         return;
   //       }
-  
+
   //       try {
   //         const response = await FormService.getFormById(formId); // Use your provided async function
   //         if (response) {
@@ -212,7 +222,7 @@ export default function Sidebar({
   //       }
   //     }
   //   };
-  
+
   //   fetchFormEntity();
   // }, [formId, customSettings.form_title_align]); // Adjust dependencies to prevent unnecessary re-fetches
 
@@ -366,9 +376,9 @@ export default function Sidebar({
       </div>
       <Divider sx={{ my: 1 }} />
       <FormControl fullWidth margin="normal">
-      <Typography variant="body2" sx={{ mb: 1 }}>
-        Shrink Text Field
-      </Typography>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          Shrink Text Field
+        </Typography>
         <Select
           value={shrinkForm}
           onChange={(event: SelectChangeEvent<string>) =>
@@ -488,7 +498,7 @@ export default function Sidebar({
       sx={{
         borderRadius: 2,
         position: "fixed",
-        left: 0,
+        left: isSidebarVisible ? 0 : -300, // Slide to the left when hidden
         top: 0,
         width: 300,
         height: 700,
@@ -496,8 +506,8 @@ export default function Sidebar({
         mt: 15,
         p: 4,
         borderRight: "1px solid #ddd",
-        transition: 'left 0.3s', // Smooth transition
-        zIndex: 1100,
+        transition: "left 0.3s ease", // Smooth transition for sliding
+        zIndex: 1200,
       }}
     >
       <div style={{ textAlign: "center" }}>
@@ -530,6 +540,21 @@ export default function Sidebar({
       >
         Print Form Title Alignment
       </Button> */}
+      <Button
+        sx={{
+          position: "absolute",
+          top: "20px",
+          right: "10px", // Position it to the right side
+          zIndex: 1200, // Make sure it's above the sidebar
+          borderRadius: "10%",
+          width: "10px",
+          boxShadow: 2,
+        }}
+        onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+      >
+        {isSidebarVisible ? <ChevronLeftIcon /> : <ChevronRightIcon />}{" "}
+        {/* Conditionally render the icon */}
+      </Button>
     </Box>
   );
 }

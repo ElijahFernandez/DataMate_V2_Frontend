@@ -15,12 +15,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import TableService from "../services/TableService";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import ReactDataGrid from "@inovua/reactdatagrid-community";
-import { EditIcon, TblIcon } from "../components/icons";
-import { SaveAs } from "@mui/icons-material";
-import Chatbox from "../components/Chatbox";
-
+import {TblIcon } from "../components/icons";
 import FormPrompt from "../prompts/FormPrompt";
-import { FormHeaders } from "../api/dataTypes";
 import ReportPrompt from "../prompts/ReportPrompt";
 import FormDetailsPrompt from "../prompts/FormDetailsPrompt";
 
@@ -85,7 +81,6 @@ export default function DatabasePage({
   startLoading,
 }: DatabasePageProps) {
   const loc = useLocation();
-  const nav = useNavigate();
   const dbId = loc.state.dbid;
   // note: loc.state is getting the id from the prev page RIGHT HEREEE
   const [Tables, setTables] = useState<string[]>([]);
@@ -100,16 +95,11 @@ export default function DatabasePage({
   const tblHeight = tblData.length * 47;
   let sqlStr = "";
   let FirstColumns: string[] = [];
-  const [isChatboxOpen, setIsChatboxOpen] = useState<boolean>(false);
 
-  //
-  //
-  //
   const [formHeaders, setFormHeaders] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDetailsForm, setShowDetailsForm] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("");
 
@@ -176,9 +166,6 @@ export default function DatabasePage({
     return JSON.stringify({ headers: formHeaders });
   };
 
-  const toggleChatbox = () => {
-    setIsChatboxOpen((prev) => !prev);
-  };
 
   function createColumns(strings: string[]): HeaderConfig[] {
     let strArr: HeaderConfig[] = [];

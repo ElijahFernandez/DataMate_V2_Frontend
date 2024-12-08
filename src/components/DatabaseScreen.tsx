@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import trashBinImage from "../images/Trashbin.png";
+import trashBinImage from "../images/trash-bin-svgrepo-com.svg";
 import {
   Button,
   MenuItem,

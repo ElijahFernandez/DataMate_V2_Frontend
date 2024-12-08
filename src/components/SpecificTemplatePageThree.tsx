@@ -30,6 +30,7 @@ import { useState } from 'react';
 import Navbar from './Navbar';
 import Topbar from './Topbar';
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 export default function SpecificTemplate(){
 
@@ -45,11 +46,10 @@ export default function SpecificTemplate(){
 
     const downloadFile = async () =>{
       axios({
-          // url: "https://datamate-api.onrender.com/downloadTemplate/3",
-          url: "https:localhost:8080/downloadTemplate/3",
-          method: 'GET',
-          responseType: 'arraybuffer', 
-      }).then(async (response) => {
+            url: `${API_URL}/downloadTemplate/3`,
+            method: 'GET',
+            responseType: 'arraybuffer', 
+          }).then(async (response) => {
           const blobData :Blob = new Blob([response.data], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml;charset=UTF-8"});
           const href = URL.createObjectURL(blobData);
       

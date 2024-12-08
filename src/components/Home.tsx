@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Box, Button, Modal, Stack, Typography, Zoom } from "@mui/material"
+import { Box, Button, Stack } from "@mui/material"
 import GirlImg from '../images/girl.png';
 import DownArrow from '../images/downarrow.png';
 import TemplateInstructions from '../images/instructions_one.gif';
@@ -17,7 +17,7 @@ type HomeProps = {
 }
 
 export default function Home({toggleImport}:HomeProps){
-    const [importFile, setImportFile] = React.useState(false);
+    // const [importFile, setImportFile] = React.useState(false);
     const nav = useNavigate();
     const isLoggedIn = useSelector((state:RootState) => state.auth.isLoggedIn);
   

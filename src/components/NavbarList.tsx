@@ -1,3 +1,4 @@
+import React from 'react';
 import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
 import { NavbarLink } from './NavbarLink';
 import { useNavigate } from 'react-router-dom';
@@ -99,4 +100,4 @@ const NavbarList = ({ open,  handleDrawerClose }: NavbarListProps) => {
   );
 };
 
-export default NavbarList;
+export default React.memo(NavbarList);

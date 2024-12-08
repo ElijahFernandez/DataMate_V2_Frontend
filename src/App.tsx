@@ -12,10 +12,8 @@ import { PaletteColorOptions, createTheme } from "@mui/material/styles";
 import {
   Backdrop,
   Box,
-  Button,
   CircularProgress,
   Modal,
-  Typography,
 } from "@mui/material";
 import "./App.css";
 import Home from "./components/Home";
@@ -38,18 +36,14 @@ import DeleteProfile from "./components/DeleteProfile";
 import { Provider, useSelector } from "react-redux";
 import { RootState, store } from "./helpers/Store";
 import Login from "./components/Login";
-import FileScreen from "./components/FileScreen";
-import FilePage from "./pages/FileScreenPage";
 import ConvertFilePage from "./pages/ConvertFilePage";
 import DatabasePage from "./pages/DatabasePage";
 import Registration from "./components/Registration";
 import EditProfile from "./components/EditProfile";
 import DeletedFiles from "./components/DeletedFiles";
-import HomeInit from "./components/HomeInit";
 import NormalizePrompt from "./prompts/NormalizePrompt";
 import SpecificTemplatePageTwo from "./components/SpecificTemplatePageTwo";
 import SpecificTemplatePageThree from "./components/SpecificTemplatePageThree";
-import HomeInitial from "./pages/HomeInitial";
 import TopbarInit from "./components/TopbarInit";
 import ForgotPassword from "./components/ForgotPassword";
 import PrivateRoute from "./components/PrivateRoute";
@@ -59,9 +53,6 @@ import FileLogs from "./components/FileLogs";
 import VerifyCode from "./components/VerifyEmail";
 import Snackbar from "./components/Snackbar";
 import ResetPassword from "./components/ResetPassword";
-
-// Here lies DataMate V2's increment // 
-
 import ReportScreen from "./v2_components/ReportScreen";
 import ReportPage from "./v2_components/ReportPage";
 import FormScreen from "./v2_components/FormScreen";
@@ -140,10 +131,6 @@ function App() {
   //number state for the index of the sheet to be displayed in select table
   const [sheetIndex, setSIndex] = useState(0);
 
-  // const handleDrawerOpen = () => {
-  //   setOpen(true);
-  // };
-
   const toggleDrawerOpen = () => {
     setOpen(!open);
   };
@@ -189,10 +176,6 @@ function App() {
   const StopLoading = () => {
     setLoading(false);
   };
-
-  // const handleDrawerClose = () => {
-  //   setOpen(false);
-  // };
 
   const StartProcessing = () => {
     setProcessing(true);
@@ -731,30 +714,6 @@ function App() {
                       </PrivateRoute>
                     }
                   ></Route>
-
-                  {/* GEN FORMS */}
-                  {/* nested for genformspage */}
-                  {/* <Route path="aiform"> {/* parent url | localhost:3000/aiform*/}
-                    {/* <Route
-                      index
-                      element={
-                        <PrivateRoute>
-                          <GenerateForm />
-                        </PrivateRoute>
-                      }
-                    />
-                  </Route> */}
-
-                  {/* <Route path="localform"> {/* parent url | localhost:3000/localform*/}
-                    {/* <Route
-                      index
-                      element={
-                        <PrivateRoute>
-                          <LocalForm />
-                        </PrivateRoute>
-                      }
-                    />
-                  </Route> */}
 
                   {/* nested for Reports */}
                   <Route path="reports">  {/* parent url | localhost:3000/reports */}

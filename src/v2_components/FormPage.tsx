@@ -488,24 +488,20 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
     const condition = `${columnNameId} = '${formData[columnNameId]}'`;
 
     const payload = {
-      tableName: formEntity.tblName,
+      tableName: formEntity.tblName || "",
       headers: headers,
       values: values,
       conditions: condition,
     };
-
+    console.log("Payload", payload)
     try {
-      const response = await FormService.modifyValues({
-        tableName: formEntity?.tblName || "",
-        headers: Object.keys(formData),
-        values: Object.values(formData),
-        condition: condition,
-      });
-
+      const response = await FormService.modifyValues(payload);
       if (response.status === 200) {
         toast.success("Form modified successfully!");
+        console.log("API Response:", response);
       } else {
         toast.error("Failed to modify form.");
+        console.log("API Response:", response);
       }
     } catch (error) {
       console.error("Error modifying form:", error);
@@ -829,6 +825,7 @@ export default function FormPage({ startLoading, stopLoading }: FormPageProps) {
             </Button>
           </Box>
         </Popover>
+        {/* Edit Button */}
         <Box
           onClick={handleEditClick}
           sx={{

@@ -14,7 +14,7 @@ interface ModifyPayload {
     tableName: string;
     headers: string[];
     values: string[];
-    condition: string;
+    conditions: string;
 }
 
 interface ProcessedFormHeaders {
